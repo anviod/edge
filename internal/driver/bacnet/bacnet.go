@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,14 +68,9 @@ type BACnetDriver struct {
 	interfacePort int
 	subnetCIDR    int
 
-	// Target settings
-	targetDeviceID int
-	targetIP       string
-	targetPort     int
-
 	// Multi-device support
 	deviceContexts map[int]*DeviceContext
-	targetDevice   btypes.Device
+	idMap          map[string]int
 
 	connected     bool
 	lastDiscovery time.Time
@@ -106,6 +102,7 @@ func NewBACnetDriver() driver.Driver {
 		clientFactory:     NewClient,
 		historicalObjects: make(map[int]map[string]ObjectResult),
 		deviceContexts:    make(map[int]*DeviceContext),
+		idMap:             make(map[string]int),
 	}
 }
 
@@ -158,26 +155,8 @@ func (d *BACnetDriver) Init(config model.DriverConfig) error {
 		}
 	}
 
-	// Parse Target Config
-	// Note: device_id might be provided in Init config or SetDeviceConfig
-	if v, ok := config.Config["device_id"]; ok {
-		if val, ok := v.(int); ok {
-			d.targetDeviceID = val
-		} else if val, ok := v.(float64); ok {
-			d.targetDeviceID = int(val)
-		}
-	}
-
-	if v, ok := config.Config["ip"]; ok {
-		d.targetIP = fmt.Sprintf("%v", v)
-	}
-	if v, ok := config.Config["port"]; ok {
-		if val, ok := v.(int); ok {
-			d.targetPort = val
-		} else if val, ok := v.(float64); ok {
-			d.targetPort = int(val)
-		}
-	}
+	// NOTE: We do not set targetDeviceID/IP/Port here anymore.
+	// Each device is configured individually via SetDeviceConfig.
 
 	return nil
 }
@@ -221,20 +200,8 @@ func (d *BACnetDriver) Connect(ctx context.Context) error {
 	time.Sleep(100 * time.Millisecond)
 
 	// Discover Target Device
-	if d.targetDeviceID > 0 {
-		if err := d.discoverDevice(d.targetDeviceID, d.targetIP, d.targetPort); err != nil {
-			zap.L().Warn("Initial discovery failed", zap.Int("device_id", d.targetDeviceID), zap.Error(err))
-			// Do NOT close client here; we need it for recovery/retry
-			// d.client.Close()
-			// d.client = nil
-			// return err
-		} else {
-			d.connected = true
-		}
-	} else {
-		// No target device configured yet, but driver is ready
-		d.connected = true
-	}
+	// Only if we had some target configured? No, wait for SetDeviceConfig.
+	d.connected = true
 
 	return nil
 }
@@ -344,20 +311,50 @@ func (d *BACnetDriver) Disconnect() error {
 }
 
 func (d *BACnetDriver) ReadPoints(ctx context.Context, points []model.Point) (map[string]model.Value, error) {
+	// Refactored for isolation
+	if len(points) == 0 {
+		return map[string]model.Value{}, nil
+	}
+
 	d.mu.Lock()
-	targetID := d.targetDeviceID
+	// Resolve Target ID from Point
+	targetID := -1
+	sID := points[0].DeviceID
+
+	// Verify all points belong to the same device to prevent crosstalk
+	for i := 1; i < len(points); i++ {
+		if points[i].DeviceID != sID {
+			d.mu.Unlock()
+			return nil, fmt.Errorf("mixed device IDs in ReadPoints: expected %s, got %s (point: %s)", sID, points[i].DeviceID, points[i].Name)
+		}
+	}
+
+	// Try map lookup first
+	if id, ok := d.idMap[sID]; ok {
+		targetID = id
+	}
+
+	if targetID == -1 {
+		// Fallback: Try whole string parsing (only if it matches exactly)
+		if val, err := strconv.Atoi(sID); err == nil {
+			targetID = val
+		}
+		// NOTE: Removed heuristic suffix parsing to prevent incorrect mapping (e.g. bacnet-18 -> 18 != 2228318)
+	}
+
 	devCtx, exists := d.deviceContexts[targetID]
 	d.mu.Unlock()
 
 	if !exists || devCtx.Scheduler == nil {
-		// Trigger recovery if scheduler is missing (device offline or not found)
-		d.checkRecovery(targetID)
-		return nil, fmt.Errorf("scheduler not initialized for device %d", targetID)
+		if targetID != -1 {
+			d.checkRecovery(targetID)
+		}
+		return nil, fmt.Errorf("scheduler not initialized for device %s (targetID=%d). Ensure device ID contains the BACnet Instance ID.", sID, targetID)
 	}
+
 	results, err := devCtx.Scheduler.Read(ctx, points)
 	if err != nil {
 		zap.L().Warn("ReadPoints failed", zap.Int("device_id", targetID), zap.Error(err))
-		// Trigger recovery if read fails
 		d.checkRecovery(targetID)
 	}
 	return results, err
@@ -385,17 +382,10 @@ func (d *BACnetDriver) checkRecovery(deviceID int) {
 		port = devCtx.Config.Port
 		isContextExists = true
 	} else {
-		zap.L().Debug("checkRecovery: context NOT found", zap.Int("device_id", deviceID), zap.Int("target_id", d.targetDeviceID))
-		// Fallback: If this is the target device, use driver config
-		if deviceID == d.targetDeviceID {
-			lastDiscovery = d.lastDiscovery
-			ip = d.targetIP
-			port = d.targetPort
-		} else {
-			// Unknown device, cannot recover
-			d.mu.Unlock()
-			return
-		}
+		zap.L().Debug("checkRecovery: context NOT found", zap.Int("device_id", deviceID))
+		// Cannot recover unknown device
+		d.mu.Unlock()
+		return
 	}
 
 	if time.Since(lastDiscovery) < 30*time.Second {
@@ -425,8 +415,6 @@ func (d *BACnetDriver) checkRecovery(deviceID int) {
 		}
 
 		// Refresh config from context to ensure we use the latest settings
-		// This prevents race conditions where an external update (e.g. SetDeviceConfig)
-		// has changed the target port (e.g. override to 47808) but we are using stale values.
 		if ctx, ok := d.deviceContexts[deviceID]; ok {
 			ip = ctx.Config.IP
 			port = ctx.Config.Port
@@ -453,9 +441,35 @@ func (d *BACnetDriver) WritePoint(ctx context.Context, point model.Point, value 
 		return fmt.Errorf("driver not connected")
 	}
 
-	devCtx, exists := d.deviceContexts[d.targetDeviceID]
+	// Resolve Target ID from Point
+	targetID := -1
+	sID := point.DeviceID
+
+	// Try map lookup first
+	if id, ok := d.idMap[sID]; ok {
+		targetID = id
+	}
+
+	if targetID == -1 {
+		// Heuristic: Try to match string ID suffix
+		parts := strings.Split(sID, "-")
+		if len(parts) > 0 {
+			if val, err := strconv.Atoi(parts[len(parts)-1]); err == nil {
+				targetID = val
+			}
+		}
+
+		// Fallback: Try whole string parsing
+		if targetID == -1 {
+			if val, err := strconv.Atoi(sID); err == nil {
+				targetID = val
+			}
+		}
+	}
+
+	devCtx, exists := d.deviceContexts[targetID]
 	if !exists || devCtx.Scheduler == nil {
-		return fmt.Errorf("scheduler not initialized for device %d", d.targetDeviceID)
+		return fmt.Errorf("scheduler not initialized for device %s (targetID=%d). Ensure device ID contains the BACnet Instance ID.", sID, targetID)
 	}
 
 	// Determine Priority and Value
@@ -568,30 +582,51 @@ func (d *BACnetDriver) SetDeviceConfig(config map[string]any) error {
 			newID = int(val)
 		}
 	}
-
-	if v, ok := config["ip"]; ok {
-		if val, ok := v.(string); ok {
-			d.targetIP = val
+	// Support instance_id alias
+	if newID == 0 {
+		if v, ok := config["instance_id"]; ok {
+			if val, ok := v.(int); ok {
+				newID = val
+			} else if val, ok := v.(float64); ok {
+				newID = int(val)
+			}
 		}
 	}
 
+	// Update idMap if _internal_device_id is provided
+	if v, ok := config["_internal_device_id"]; ok {
+		if sID, ok := v.(string); ok && newID != 0 {
+			if d.idMap == nil {
+				d.idMap = make(map[string]int)
+			}
+			d.idMap[sID] = newID
+			zap.L().Debug("Mapped DeviceID string to InstanceID", zap.String("id", sID), zap.Int("instance", newID))
+		}
+	}
+
+	var ip string
+	if v, ok := config["ip"]; ok {
+		if val, ok := v.(string); ok {
+			ip = val
+		}
+	}
+
+	var port int
 	if v, ok := config["port"]; ok {
 		if val, ok := v.(int); ok {
-			d.targetPort = val
+			port = val
 		} else if val, ok := v.(float64); ok {
-			d.targetPort = int(val)
+			port = int(val)
 		}
 	}
 
 	zap.L().Debug("SetDeviceConfig",
 		zap.Int("new_id", newID),
-		zap.String("ip", d.targetIP),
-		zap.Int("port", d.targetPort),
-		zap.Int("target_device_id", d.targetDeviceID),
+		zap.String("ip", ip),
+		zap.Int("port", port),
 		zap.Bool("connected", d.connected))
 
 	if newID != 0 {
-		d.targetDeviceID = newID
 		// Only discover if context missing or config changed or scheduler is nil
 		ctx, exists := d.deviceContexts[newID]
 		needDiscovery := false
@@ -599,10 +634,10 @@ func (d *BACnetDriver) SetDeviceConfig(config map[string]any) error {
 		if !exists {
 			needDiscovery = true
 		} else {
-			if d.targetIP != "" && ctx.Config.IP != d.targetIP {
+			if ip != "" && ctx.Config.IP != ip {
 				needDiscovery = true
 			}
-			if d.targetPort != 0 && ctx.Config.Port != d.targetPort {
+			if port != 0 && ctx.Config.Port != port {
 				needDiscovery = true
 			}
 			if ctx.Scheduler == nil {
@@ -613,8 +648,8 @@ func (d *BACnetDriver) SetDeviceConfig(config map[string]any) error {
 		if needDiscovery {
 			// If connected, trigger discovery immediately
 			if d.connected && d.client != nil {
-				if err := d.discoverDevice(d.targetDeviceID, d.targetIP, d.targetPort); err != nil {
-					zap.L().Error("Failed to discover updated device", zap.Int("device_id", d.targetDeviceID), zap.Error(err))
+				if err := d.discoverDevice(newID, ip, port); err != nil {
+					zap.L().Error("Failed to discover updated device", zap.Int("device_id", newID), zap.Error(err))
 					return err
 				}
 			}

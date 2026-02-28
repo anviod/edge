@@ -850,7 +850,14 @@ func (cm *ChannelManager) collectDevice(dev *model.Device, d drv.Driver, ch *mod
 	}
 
 	// 设置设备配置 (BACnet 等需要 IP/Port)
-	if err := d.SetDeviceConfig(dev.Config); err != nil {
+	// Inject _internal_device_id for BACnet driver mapping
+	config := make(map[string]any)
+	for k, v := range dev.Config {
+		config[k] = v
+	}
+	config["_internal_device_id"] = dev.ID
+
+	if err := d.SetDeviceConfig(config); err != nil {
 		zap.L().Error("Failed to set device config", zap.String("device", dev.Name), zap.Error(err))
 	}
 
@@ -977,7 +984,13 @@ func (cm *ChannelManager) WritePoint(channelID, deviceID, pointID string, value 
 	}
 
 	// 设置设备配置
-	d.SetDeviceConfig(dev.Config)
+	// Inject _internal_device_id
+	config := make(map[string]any)
+	for k, v := range dev.Config {
+		config[k] = v
+	}
+	config["_internal_device_id"] = dev.ID
+	d.SetDeviceConfig(config)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -1035,7 +1048,13 @@ func (cm *ChannelManager) ReadPoint(channelID, deviceID, pointID string) (model.
 	}
 
 	// 设置设备配置
-	d.SetDeviceConfig(dev.Config)
+	// Inject _internal_device_id
+	config := make(map[string]any)
+	for k, v := range dev.Config {
+		config[k] = v
+	}
+	config["_internal_device_id"] = dev.ID
+	d.SetDeviceConfig(config)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

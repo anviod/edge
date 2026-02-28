@@ -9,14 +9,14 @@
 * **ObjectID**：对象标识（Type + Instance）
 * **Property**：对象属性标识
 
-当前设备清单中 Room_FC_2014_19 能正常读取点位 其他设备均点位异常bad（验收范围）：
+当前设备清单（验收范围 ：设备点位不可串流到一起）：
 
-* bacnet-18 → Instance ID 2228318
+* bacnet-18 → Instance ID 2228318 ->Setpoint.1	AnalogValue 1	318.00 验证点不得出现在其他设备点位中
 * bacnet-16 → Instance ID 2228316
 * bacnet-17 → Instance ID 2228317
 * Room_FC_2014_19 → Instance ID 2228319
 
-> ⚠ 验收前提：所有设备物理运行正常，网络正常
+> ⚠ 验收前提：已确认所有设备物理运行正常，网络正常
 > ⚠ 最终要求：**全部设备质量等级必须为 Good（≥85分）**
 
 如果使用token 可以利用下面的例子 (当前token为有效token)
