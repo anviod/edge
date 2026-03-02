@@ -15,7 +15,7 @@ func (s *Server) scanDevice(c *fiber.Ctx) error {
 
 	result, err := s.cm.ScanDevice(channelId, deviceId, params)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"message": err.Error()})
 	}
 
 	return c.JSON(result)

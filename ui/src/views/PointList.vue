@@ -2804,7 +2804,11 @@ const existingAddresses = computed(() => {
 
 const scanFilteredResults = computed(() => {
     if (!scanDialog.varsOnly) return scanDialog.results
-    return scanDialog.results.filter(r => !r.isOpcNode || r.type === 'Variable')
+    const filtered = scanDialog.results.filter(r => !r.isOpcNode || r.type === 'Variable')
+    if (channelProtocol.value === 'opc-ua' && scanDialog.results.length > 0 && filtered.length === 0) {
+        return scanDialog.results
+    }
+    return filtered
 })
 
 const getStatusColor = (status) => {
@@ -3028,6 +3032,9 @@ const scanPoints = async () => {
         const res = await request.post(`/api/channels/${channelId.value}/devices/${deviceId.value}/scan`, payload, { timeout: 60000 })
         
         if (Array.isArray(res)) {
+            if (res.length === 0) {
+                showMessage('扫描结果为空', 'warning')
+            }
             if (channelProtocol.value === 'opc-ua') {
                 // Flatten OPC UA tree for display
                 scanDialog.results = flattenOpcNodes(res)

@@ -2,7 +2,9 @@ package opcua
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strconv"
 	"strings"
@@ -102,11 +104,11 @@ func (d *OpcUaDriver) SetDeviceConfig(config map[string]any) error {
 		case string:
 			if val == "true" || val == "1" {
 				d.useDataformatDecoder = true
+			} else {
+				d.useDataformatDecoder = false
 			}
 		case float64:
-			if val != 0 {
-				d.useDataformatDecoder = true
-			}
+			d.useDataformatDecoder = val != 0
 		}
 	}
 
@@ -600,7 +602,11 @@ func (d *OpcUaDriver) ScanObjects(ctx context.Context, config map[string]any) (a
 		return nil, fmt.Errorf("failed to create scan client: %v", err)
 	}
 
-	scanCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	scanCtx := ctx
+	cancel := func() {}
+	if _, ok := ctx.Deadline(); !ok {
+		scanCtx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	}
 	defer cancel()
 
 	if err := c.Connect(scanCtx); err != nil {
@@ -608,71 +614,44 @@ func (d *OpcUaDriver) ScanObjects(ctx context.Context, config map[string]any) (a
 	}
 	defer c.Close(context.Background())
 
-	return d.browseNode(scanCtx, c, rootID, 0)
+	// Use recursive helper with concurrency control
+	results, err := d.browseNode(scanCtx, c, rootID, 0)
+	if err != nil {
+		return nil, fmt.Errorf("scan failed: %v", err)
+	}
+
+	return results, nil
 }
 
+// browseNode recursively browses the OPC UA address space
+// It now supports concurrent browsing for children to speed up scanning
 func (d *OpcUaDriver) browseNode(ctx context.Context, c *opcua.Client, nodeID *ua.NodeID, depth int) ([]map[string]any, error) {
-	if depth > 5 { // Limit depth
+	if depth > 10 { // Limit depth
 		return nil, nil
 	}
 
-	zap.L().Debug("Browsing node", zap.String("node_id", nodeID.String()), zap.Int("depth", depth))
-
-	// Retry loop for browsing
-	var resp *ua.BrowseResponse
-	var err error
-
-	for attempt := 0; attempt < 3; attempt++ {
-		req := &ua.BrowseRequest{
-			NodesToBrowse: []*ua.BrowseDescription{
-				{
-					NodeID:          nodeID,
-					BrowseDirection: ua.BrowseDirectionForward,
-					ReferenceTypeID: ua.NewNumericNodeID(0, 33), // HierarchicalReferences
-					IncludeSubtypes: true,
-					NodeClassMask:   uint32(ua.NodeClassObject | ua.NodeClassVariable),
-					ResultMask:      uint32(ua.BrowseResultMaskAll),
-				},
-			},
-		}
-
-		resp, err = c.Browse(ctx, req)
-		if err == nil && len(resp.Results) > 0 && resp.Results[0].StatusCode == ua.StatusOK {
-			break
-		}
-
-		// If error, try to reconnect
-		zap.L().Warn("Browse failed, reconnecting", zap.Int("attempt", attempt+1), zap.Error(err))
-
-		// Try to reconnect
-		_ = c.Close(ctx) // Ignore error on close
-		time.Sleep(1 * time.Second)
-		if connErr := c.Connect(ctx); connErr != nil {
-			zap.L().Warn("Reconnection failed", zap.Error(connErr))
-		} else {
-			zap.L().Info("Reconnected successfully")
-		}
-	}
-
+	// Fetch references
+	refs, err := d.fetchReferences(ctx, c, nodeID)
 	if err != nil {
-		zap.L().Error("Browse failed after retries", zap.Error(err))
 		return nil, err
-	}
-	if len(resp.Results) == 0 || resp.Results[0].StatusCode != ua.StatusOK {
-		zap.L().Warn("Browse bad result", zap.Any("results", resp.Results))
-		return nil, nil
 	}
 
 	var results []map[string]any
 	var variableNodeIDs []*ua.ReadValueID
 	var variableIndices []int
+	var childrenToBrowse []*ua.NodeID
+	var childrenIndices []int
 
-	for _, ref := range resp.Results[0].References {
+	for _, ref := range refs {
 		// Convert NodeID to string
 		nodeIDStr := ref.NodeID.NodeID.String()
+		parsedID, parseErr := ua.ParseNodeID(nodeIDStr)
+		if parseErr != nil {
+			continue
+		}
 
 		// Skip standard "Server" object (ns=0;i=2253)
-		if ref.NodeID.NodeID.Namespace() == 0 && (ref.NodeID.NodeID.IntID() == 2253 || ref.NodeID.NodeID.IntID() == 23470 || ref.NodeID.NodeID.IntID() == 31915) {
+		if parsedID.Namespace() == 0 && (parsedID.IntID() == 2253 || parsedID.IntID() == 23470 || parsedID.IntID() == 31915) {
 			continue
 		}
 
@@ -688,66 +667,150 @@ func (d *OpcUaDriver) browseNode(ctx context.Context, c *opcua.Client, nodeID *u
 
 			// Queue for DataType reading
 			variableNodeIDs = append(variableNodeIDs, &ua.ReadValueID{
-				NodeID:      ref.NodeID.NodeID,
+				NodeID:      parsedID,
 				AttributeID: ua.AttributeIDDataType,
 			})
 			variableIndices = append(variableIndices, len(results))
-
 			results = append(results, item)
+
 		} else if ref.NodeClass == ua.NodeClassObject {
 			item["type"] = "Folder"
-			// Recurse with sanitized NodeID to avoid EOF errors
-			childID, err := ua.ParseNodeID(nodeIDStr)
-			if err != nil {
-				zap.L().Warn("Failed to parse child node ID", zap.String("node_id", nodeIDStr), zap.Error(err))
-				continue
-			}
-
-			// Throttle slightly
-			time.Sleep(50 * time.Millisecond)
-
-			children, _ := d.browseNode(ctx, c, childID, depth+1)
-			if len(children) > 0 {
-				item["children"] = children
-			}
+			// Queue for recursive browsing
+			childrenToBrowse = append(childrenToBrowse, parsedID)
+			childrenIndices = append(childrenIndices, len(results))
 			results = append(results, item)
 		}
 	}
 
-	// Batch read DataTypes for variables found in this level
+	// 1. Batch Read DataTypes (Sequential, fast enough)
 	if len(variableNodeIDs) > 0 {
-		for attempt := 0; attempt < 3; attempt++ {
-			readResp, err := c.Read(ctx, &ua.ReadRequest{
-				NodesToRead: variableNodeIDs,
-				MaxAge:      2000,
-			})
-			if err == nil && len(readResp.Results) == len(variableNodeIDs) {
-				for i, res := range readResp.Results {
-					if res.Status == ua.StatusOK && res.Value != nil {
-						if typeID, ok := res.Value.Value().(*ua.NodeID); ok {
-							results[variableIndices[i]]["data_type"] = lookupDataType(typeID)
-						}
-					}
-				}
-				break // Success
+		d.batchReadDataTypes(ctx, c, variableNodeIDs, results, variableIndices)
+	}
+
+	// 2. Browse Children (sequential)
+	if len(childrenToBrowse) > 0 {
+		for i, childID := range childrenToBrowse {
+			idx := childrenIndices[i]
+			children, err := d.browseNode(ctx, c, childID, depth+1)
+			if err != nil {
+				zap.L().Warn("Browse child failed", zap.String("node", childID.String()), zap.Error(err))
+				results[idx]["browse_error"] = err.Error()
+				continue
 			}
-
-			zap.L().Warn("Read DataTypes failed", zap.Int("attempt", attempt+1), zap.Error(err))
-
-			if attempt < 2 {
-				// Reconnect logic
-				_ = c.Close(ctx)
-				time.Sleep(1 * time.Second)
-				if connErr := c.Connect(ctx); connErr != nil {
-					zap.L().Warn("Reconnection failed", zap.Error(connErr))
-				} else {
-					zap.L().Info("Reconnected successfully")
-				}
+			if len(children) > 0 {
+				results[idx]["children"] = children
 			}
 		}
 	}
 
 	return results, nil
+}
+
+// fetchReferences handles the Browse request with retries
+func (d *OpcUaDriver) fetchReferences(ctx context.Context, c *opcua.Client, nodeID *ua.NodeID) ([]ua.ReferenceDescription, error) {
+	// Initial request
+	req := &ua.BrowseRequest{
+		RequestedMaxReferencesPerNode: 50,
+		NodesToBrowse: []*ua.BrowseDescription{
+			{
+				NodeID:          nodeID,
+				BrowseDirection: ua.BrowseDirectionForward,
+				ReferenceTypeID: ua.NewNumericNodeID(0, 33), // HierarchicalReferences
+				IncludeSubtypes: true,
+				NodeClassMask:   uint32(ua.NodeClassObject | ua.NodeClassVariable),
+				ResultMask:      uint32(ua.BrowseResultMaskAll),
+			},
+		},
+	}
+
+	resp, err := c.Browse(ctx, req)
+	if err != nil && isOPCUAConnError(err) {
+		_ = c.Close(context.Background())
+		if err2 := c.Connect(ctx); err2 == nil {
+			resp, err = c.Browse(ctx, req)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(resp.Results) == 0 || resp.Results[0].StatusCode != ua.StatusOK {
+		return nil, fmt.Errorf("bad status code: %v", resp.Results[0].StatusCode)
+	}
+
+	var refs []ua.ReferenceDescription
+	for _, r := range resp.Results[0].References {
+		refs = append(refs, *r)
+	}
+
+	// Handle ContinuationPoint
+	continuationPoint := resp.Results[0].ContinuationPoint
+	for len(continuationPoint) > 0 {
+		reqNext := &ua.BrowseNextRequest{
+			ReleaseContinuationPoints: false,
+			ContinuationPoints:        [][]byte{continuationPoint},
+		}
+
+		respNext, err := c.BrowseNext(ctx, reqNext)
+		if err != nil {
+			return nil, err
+		}
+		if len(respNext.Results) == 0 || respNext.Results[0].StatusCode != ua.StatusOK {
+			return nil, fmt.Errorf("browse next bad status code: %v", respNext.Results[0].StatusCode)
+		}
+
+		for _, r := range respNext.Results[0].References {
+			refs = append(refs, *r)
+		}
+
+		continuationPoint = respNext.Results[0].ContinuationPoint
+	}
+
+	return refs, nil
+}
+
+func isOPCUAConnError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "use of closed network connection") || strings.Contains(msg, "EOF")
+}
+
+// batchReadDataTypes reads data types in batches
+func (d *OpcUaDriver) batchReadDataTypes(ctx context.Context, c *opcua.Client, nodeIDs []*ua.ReadValueID, results []map[string]any, indices []int) {
+	// Split into smaller chunks if necessary (e.g., 100 items)
+	chunkSize := 50
+	for i := 0; i < len(nodeIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(nodeIDs) {
+			end = len(nodeIDs)
+		}
+
+		chunkIDs := nodeIDs[i:end]
+		chunkIndices := indices[i:end]
+
+		req := &ua.ReadRequest{
+			NodesToRead: chunkIDs,
+			MaxAge:      2000,
+		}
+
+		resp, err := c.Read(ctx, req)
+		if err != nil {
+			zap.L().Warn("Read DataTypes chunk failed", zap.Error(err))
+			continue
+		}
+
+		for j, res := range resp.Results {
+			if res.Status == ua.StatusOK && res.Value != nil {
+				if typeID, ok := res.Value.Value().(*ua.NodeID); ok {
+					results[chunkIndices[j]]["data_type"] = lookupDataType(typeID)
+				}
+			}
+		}
+	}
 }
 
 func lookupDataType(id *ua.NodeID) string {

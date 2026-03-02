@@ -435,7 +435,7 @@ func (s *Server) scanChannel(c *fiber.Ctx) error {
 
 	result, err := s.cm.ScanChannel(id, params)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"message": err.Error()})
 	}
 	return c.JSON(result)
 }
