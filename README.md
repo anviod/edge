@@ -14,20 +14,46 @@ Industrial Edge Gateway is a lightweight industrial edge computing gateway desig
 
 Adaptive collection system based on device profiling, enabling intelligent optimization of southbound communication:
 
-| Component | Description |
-| :--- | :--- |
-| **RTT Manager** | Real-time monitoring of device round-trip latency, predicting optimal timeout using EWMA algorithm, dynamically adjusting collection intervals |
-| **MTU Manager** | Auto-detecting device Maximum Transmission Unit, intelligently negotiating optimal packet size, improving batch read efficiency |
-| **Gap Optimizer** | Dynamically adjusting communication gaps based on device characteristics, balancing collection efficiency and device load |
-| **Shadow Device System** | Unified internal data model center, supporting real/virtual shadow devices, providing WAL persistence and consistency verification |
-| **Smart Profiling** | Building communication profiles for each device, automatically learning RTT, MTU, stability and other characteristic parameters |
-| **Collection Scheduler** | Optimizing collection order based on device profiles, supporting batch read optimization and dynamic interval adjustment |
-
 **Key Benefits:**
 - 🎯 **Adaptive Parameters**: No manual configuration needed, system automatically learns optimal collection parameters
 - ⚡ **Efficiency Boost**: Batch read optimization reduces communication overhead and increases throughput
 - 🛡️ **Enhanced Stability**: Intelligent heartbeat keep-alive, fast fault detection and automatic recovery
 - 📊 **Observability**: Complete device profiles and performance statistics for runtime monitoring
+
+**Core Components:**
+
+| Component | Technical Principle | Optimization Goal |
+| :--- | :--- | :--- |
+| **RTT Manager** | Employs EWMA algorithm for real-time round-trip delay monitoring, dynamically calculating optimal timeout thresholds | Avoid communication failures from improper timeout settings, achieve adaptive timeout parameters |
+| **MTU Manager** | Auto-detects device MTU, intelligently negotiates single-communication packet size | Maximize data throughput while ensuring reliability, improve batch collection efficiency |
+| **Gap Optimizer** | Dynamically adjusts communication request intervals based on device load and response characteristics | Achieve optimal balance between collection efficiency and device load |
+| **Shadow Device System** | Unified internal data model, supports real/virtual shadow devices with WAL persistence | Provide data consistency verification and fast recovery capabilities |
+| **Smart Profiling** | Automatically learns device RTT, MTU, stability and other characteristic parameters | Build communication profiles for each device, support intelligent decision-making |
+| **Collection Scheduler** | Optimizes collection order based on device profiles, supports batch read optimization | Improve overall collection efficiency, reduce communication overhead |
+
+### 📦 Lightweight Deployment
+
+Single-file deployment, zero dependencies, multi-architecture support, suitable for various edge computing scenarios:
+
+**Key Benefits:**
+- 📦 **Single-File Deployment** → One executable file, no installation needed
+- 🎯 **Zero Dependencies** → No additional libraries or environments required
+- 🌐 **Multi-Architecture Support** → ArmV7, Arm32/64, X86/64 fully covered
+- 💪 **Lightweight** → Runs on 128MB RAM, 1GB storage
+
+**Hardware Requirements:**
+
+| Item | Minimum | Recommended |
+| :--- | :--- | :--- |
+| **Memory** | 128MB | 512MB+ |
+| **Storage** | 1GB | 4GB+ |
+| **CPU** | Single Core | Dual Core+ |
+
+**Supported Devices:**
+- ✅ Raspberry Pi (All Series)
+- ✅ Industrial Gateways (Arm/X86)
+- ✅ Virtual Machines / Cloud Instances
+- ✅ Embedded Devices
 
 ### 🔌 Southbound Protocols
 
