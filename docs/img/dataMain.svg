@@ -46,7 +46,7 @@
     </g>
     <g transform="translate(860, 0)">
       <rect width="180" height="80" rx="10" class="panel-bg" stroke="#8b5cf6" filter="url(#glow)"/>
-      <text x="90" y="25" text-anchor="middle" class="text-label">REST/MODBUS-TCP</text>
+      <text x="90" y="25" text-anchor="middle" class="text-label">REST/HTTP(S)</text>
       <text x="90" y="45" text-anchor="middle" class="text-detail">API Key • TLS</text>
       <text x="90" y="60" text-anchor="middle" class="text-detail">Audit Log</text>
       <path id="up_l3" d="M90 120 V80" class="line-main"/>
@@ -99,7 +99,7 @@
       <path id="l2" d="M65 0 V-60" class="line-main"/><circle r="2" fill="#0ea5e9"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#l2"/></animateMotion></circle>
     </g>
     <g transform="translate(400,0)">
-      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#ec4899" filter="url(#glow)" /><text x="65" y="35" text-anchor="middle" class="text-label">IEC-104</text>
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#ec4899" filter="url(#glow)" /><text x="65" y="35" text-anchor="middle" class="text-label">OPC-UA</text>
       <path id="l3" d="M65 0 V-60" class="line-main"/><circle r="2" fill="#ec4899"><animateMotion dur="1.3s" repeatCount="indefinite"><mpath href="#l3"/></animateMotion></circle>
     </g>
     <g transform="translate(600,0)">
