@@ -5,7 +5,7 @@
 Industrial Edge Gateway is a lightweight industrial edge computing gateway designed to connect industrial field devices (Southbound) with cloud/upper-layer applications (Northbound) and provide local edge computing capabilities. The project uses Go for the backend and Vue 3 for the frontend management interface.
 
 <div align="center">
-  <img src="./docs/img/dataFlow_w.svg" width="800" />
+  <img src="./docs/img/dataFlow_w.svg" width="100%">
 </div
 
 ## ✨ Key Features
