@@ -1,105 +1,142 @@
 <svg width="1400" height="780" viewBox="0 0 1400 780" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#0f172a"/>
-
   <defs>
+    <radialGradient id="bg_grad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </radialGradient>
+
+    <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <rect width="50" height="50" fill="url(#smallGrid)"/>
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.1"/>
+    </pattern>
+
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="3" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 Z" fill="#4ade80" />
-    </marker>
-
     <style>
-      .panel-bg { fill: #1e293b; stroke-width: 2; }
-      .text-label { fill: #f1f5f9; font-family: 'Segoe UI', Arial; font-weight: 600; font-size: 16px; }
-      .text-sub { fill: #94a3b8; font-family: monospace; font-size: 12px; }
+      .panel-bg { fill: #1e293b; stroke-width: 1.5; fill-opacity: 0.95; }
+      .text-label { fill: #f1f5f9; font-family: 'Segoe UI', Arial, sans-serif; font-weight: 600; font-size: 15px; letter-spacing: 0.5px; }
+      .text-sub { fill: #94a3b8; font-family: 'Courier New', monospace; font-size: 11px; }
+      .text-digital { fill: #4ade80; font-family: monospace; font-size: 11px; }
       .line-main { fill: none; stroke: #334155; stroke-width: 2; }
       .line-active { fill: none; stroke: #38bdf8; stroke-width: 2; stroke-dasharray: 4,4; }
+      .wave-path { fill: none; stroke: #a78bfa; stroke-width: 2; filter: url(#glow); }
     </style>
   </defs>
 
-  <path id="path_cloud_gw" d="M700 160 L700 80" class="line-active" stroke="#38bdf8" marker-start="url(#arrow)"/>
-  
-  <path id="path_main_bus" d="M700 230 L700 560" class="line-main" />
+  <rect width="100%" height="100%" fill="url(#bg_grad)"/>
+  <rect width="100%" height="100%" fill="url(#grid)" />
 
-  <path id="bus_horizontal" d="M150 560 L1150 560" class="line-main" />
+  <path id="path_main_bus" d="M700 230 L700 560" class="line-main" />
+  <path id="bus_horizontal" d="M150 560 L1250 560" class="line-main" />
+
+  <g transform="translate(550, 275)">
+    <rect width="300" height="95" rx="8" class="panel-bg" stroke="#94a3b8" />
+    <text x="150" y="30" text-anchor="middle" class="text-label">SHADOW CORE</text>
+    <g transform="translate(30, 45)">
+      <rect width="40" height="6" rx="2" fill="#475569" />
+      <rect width="40" height="6" rx="2" y="12" fill="#475569" />
+      <rect width="20" height="6" rx="2" y="24" fill="#38bdf8">
+        <animate attributeName="width" values="10;40;20" dur="2s" repeatCount="indefinite" />
+      </rect>
+    </g>
+    <rect x="90" y="55" width="4" height="2" fill="#38bdf8">
+      <animate attributeName="x" from="90" to="210" dur="0.8s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0;1;0" dur="0.8s" repeatCount="indefinite" />
+    </rect>
+    <rect x="90" y="65" width="4" height="2" fill="#f59e0b">
+      <animate attributeName="x" from="210" to="90" dur="1.2s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite" />
+    </rect>
+    <g transform="translate(230, 45)">
+      <circle r="4" cx="5" cy="5" fill="#4ade80"><animate attributeName="opacity" values="1;0.2;1" dur="0.5s" repeatCount="indefinite" /></circle>
+      <text x="15" y="10" class="text-sub" style="font-size:9px">V-SYNC</text>
+      <text x="15" y="22" class="text-digital">
+        <animate attributeName="textContent" values="24ms;42ms;31ms" dur="2s" calcMode="discrete" repeatCount="indefinite" />24ms
+      </text>
+    </g>
+    <text x="150" y="85" text-anchor="middle" class="text-sub">IOPS: 12.4k / LATENCY: 0.2ms</text>
+  </g>
+
+  <g transform="translate(550, 410)">
+    <rect width="300" height="115" rx="8" class="panel-bg" stroke="#8b5cf6" />
+    <text x="150" y="30" text-anchor="middle" class="text-label">RTT MTU GAP</text>
+    <mask id="wave_mask"><rect x="40" y="45" width="220" height="40" fill="white" /></mask>
+    <g mask="url(#wave_mask)">
+      <path class="wave-path" d="M40 75 L60 65 L80 85 L100 55 L120 75 L140 65 L160 85 L180 55 L200 75 L220 65 L240 85 L260 55">
+        <animateTransform attributeName="transform" type="translate" from="0" to="-40" dur="1s" repeatCount="indefinite" />
+      </path>
+    </g>
+    <line x1="40" y1="45" x2="40" y2="85" stroke="#a78bfa" stroke-width="1" opacity="0.8">
+      <animate attributeName="x1" from="40" to="260" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="x2" from="40" to="260" dur="3s" repeatCount="indefinite" />
+    </line>
+    <text x="50" y="100" class="text-sub">MTU: 1500</text>
+    <text x="250" y="100" text-anchor="end" class="text-sub">RTT: 42ms</text>
+  </g>
+
+  <g transform="translate(150, 620)">
+    <g transform="translate(0,0)">
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#f59e0b" filter="url(#glow)" />
+      <text x="65" y="35" text-anchor="middle" class="text-label">MQTT</text>
+      <path id="l1" d="M65 0 V-60" class="line-main"/>
+      <circle r="2.5" fill="#f59e0b" filter="url(#glow)"><animateMotion dur="1.2s" repeatCount="indefinite"><mpath href="#l1"/></animateMotion></circle>
+      <circle r="2" fill="#f59e0b" opacity="0.6"><animateMotion dur="1.2s" begin="0.6s" repeatCount="indefinite"><mpath href="#l1"/></animateMotion></circle>
+    </g>
+
+    <g transform="translate(200,0)">
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#0ea5e9" filter="url(#glow)" />
+      <text x="65" y="35" text-anchor="middle" class="text-label">OPC-UA</text>
+      <path id="l2" d="M65 0 V-60" class="line-main"/>
+      <circle r="2.5" fill="#0ea5e9" filter="url(#glow)"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#l2"/></animateMotion></circle>
+      <circle r="2" fill="#0ea5e9" opacity="0.6"><animateMotion dur="1.5s" begin="0.75s" repeatCount="indefinite"><mpath href="#l2"/></animateMotion></circle>
+    </g>
+
+    <g transform="translate(400,0)">
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#ec4899" filter="url(#glow)" />
+      <text x="65" y="35" text-anchor="middle" class="text-label">MODBUS</text>
+      <path id="l3" d="M65 0 V-60" class="line-main"/>
+      <circle r="2.5" fill="#ec4899" filter="url(#glow)"><animateMotion dur="1.3s" repeatCount="indefinite"><mpath href="#l3"/></animateMotion></circle>
+    </g>
+
+    <g transform="translate(600,0)">
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#22c55e" filter="url(#glow)" />
+      <text x="65" y="35" text-anchor="middle" class="text-label">BACNET</text>
+      <path id="l4" d="M65 0 V-60" class="line-main"/>
+      <circle r="2.5" fill="#22c55e" filter="url(#glow)"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#l4"/></animateMotion></circle>
+    </g>
+
+    <g transform="translate(800,0)">
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#eab308" filter="url(#glow)" />
+      <text x="65" y="35" text-anchor="middle" class="text-label">SNMP</text>
+      <path id="l5" d="M65 0 V-60" class="line-main"/>
+      <circle r="2.5" fill="#eab308" filter="url(#glow)"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#l5"/></animateMotion></circle>
+    </g>
+
+    <g transform="translate(1000,0)">
+      <rect width="130" height="60" rx="4" class="panel-bg" stroke="#8b5cf6" filter="url(#glow)" />
+      <text x="65" y="35" text-anchor="middle" class="text-label">HTTP API</text>
+      <path id="l6" d="M65 0 V-60" class="line-main"/>
+      <circle r="2.5" fill="#8b5cf6" filter="url(#glow)"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#l6"/></animateMotion></circle>
+    </g>
+  </g>
 
   <g transform="translate(600, 20)">
     <rect width="200" height="60" rx="30" class="panel-bg" stroke="#38bdf8" filter="url(#glow)"/>
     <text x="100" y="38" text-anchor="middle" class="text-label">CLOUD CORE</text>
   </g>
-
   <g transform="translate(550, 160)">
     <rect width="300" height="70" rx="8" class="panel-bg" stroke="#4ade80" />
     <text x="150" y="42" text-anchor="middle" class="text-label">IOT GATEWAY</text>
-    <circle cx="280" cy="20" r="4" fill="#4ade80">
-      <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite" />
-    </circle>
   </g>
 
-  <g transform="translate(550, 275)">
-    <rect width="300" height="90" rx="8" class="panel-bg" stroke="#94a3b8" />
-    <text x="150" y="40" text-anchor="middle" class="text-label">SHADOW CORE</text>
-    <text x="150" y="65" text-anchor="middle" class="text-sub">STATE SYNC ACTIVE</text>
-  </g>
-
-  <g transform="translate(550, 410)">
-    <rect width="300" height="110" rx="8" class="panel-bg" stroke="#8b5cf6" />
-    <text x="150" y="45" text-anchor="middle" class="text-label">RTT MTU GAP</text>
-    <path d="M40 70 H260" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="2,2"/>
-  </g>
-
-  <g transform="translate(150, 620)">
-    <g transform="translate(0,0)">
-      <rect width="120" height="60" rx="4" class="panel-bg" stroke="#f59e0b" />
-      <text x="60" y="35" text-anchor="middle" class="text-label" style="font-size:14px">MQTT</text>
-      <path id="p1" d="M60 0 V-60" class="line-main"/>
-    </g>
-    <g transform="translate(200,0)">
-      <rect width="120" height="60" rx="4" class="panel-bg" stroke="#0ea5e9" />
-      <text x="60" y="35" text-anchor="middle" class="text-label" style="font-size:14px">OPC-UA</text>
-      <path id="p2" d="M60 0 V-60" class="line-main"/>
-    </g>
-    <g transform="translate(400,0)">
-      <rect width="120" height="60" rx="4" class="panel-bg" stroke="#8b5cf6" />
-      <text x="60" y="35" text-anchor="middle" class="text-label" style="font-size:14px">HTTP API</text>
-      <path id="p3" d="M60 0 V-60" class="line-main"/>
-    </g>
-    <g transform="translate(600,0)">
-      <rect width="120" height="60" rx="4" class="panel-bg" stroke="#ec4899" />
-      <text x="60" y="35" text-anchor="middle" class="text-label" style="font-size:14px">MODBUS</text>
-      <path id="p4" d="M60 0 V-60" class="line-main"/>
-    </g>
-    <g transform="translate(800,0)">
-      <rect width="120" height="60" rx="4" class="panel-bg" stroke="#22c55e" />
-      <text x="60" y="35" text-anchor="middle" class="text-label" style="font-size:14px">BACNET</text>
-      <path id="p5" d="M60 0 V-60" class="line-main"/>
-    </g>
-  </g>
-
-  <circle r="3" fill="#38bdf8" filter="url(#glow)">
-    <animateMotion dur="2s" repeatCount="indefinite">
-      <mpath href="#path_cloud_gw"/>
-    </animateMotion>
-  </circle>
-
-  <circle r="3" fill="#f1f5f9">
-    <animateMotion dur="4s" repeatCount="indefinite">
-      <mpath href="#path_main_bus"/>
-    </animateMotion>
-  </circle>
-
-  <path id="ctrl_flow" d="M850 195 H1300 V750 H50 V195 H550" fill="none" stroke="#4ade80" stroke-width="1" stroke-dasharray="10,5" opacity="0.4"/>
-  <circle r="2" fill="#4ade80">
-    <animateMotion dur="10s" repeatCount="indefinite">
-      <mpath href="#ctrl_flow"/>
-    </animateMotion>
-  </circle>
-
-  <circle r="2.5" fill="#f59e0b"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p1"/></animateMotion></circle>
-  <circle r="2.5" fill="#0ea5e9" begin="0.5s"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p2"/></animateMotion></circle>
-  <circle r="2.5" fill="#8b5cf6" begin="1s"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p3"/></animateMotion></circle>
+  <circle r="3" fill="#f1f5f9" filter="url(#glow)"><animateMotion dur="4s" repeatCount="indefinite"><mpath href="#path_main_bus"/></animateMotion></circle>
+  <path id="path_cloud_gw" d="M700 160 L700 80" class="line-active" />
+  <circle r="3" fill="#38bdf8" filter="url(#glow)"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#path_cloud_gw"/></animateMotion></circle>
 
 </svg>
