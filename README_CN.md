@@ -3,7 +3,7 @@
 Industrial Edge Gateway 是一个轻量级的工业边缘计算网关，旨在连接工业现场设备（南向）与云端/上层应用（北向），并提供本地边缘计算能力。项目采用 Go 语言开发后端，Vue 3 开发前端管理界面。
 
 <div align="center">
-  <img src="./docs/img/dataMain_CN.svg" width="800" />
+  <img src="./docs/img/dataMain_CN.svg" width="100%" />
 </div>
 
 ##  ✨ 主要特性
