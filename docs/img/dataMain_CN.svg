@@ -16,11 +16,8 @@
 
     <style>
       .panel-bg { fill: #ffffff; stroke-width: 2; fill-opacity: 0.95; }
-      /* 调大标签字体 */
       .text-label { fill: #1e293b; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; font-weight: 800; font-size: 18px; }
-      /* 调大详情字体 */
       .text-detail { fill: #475569; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 14px; font-weight: 500; }
-      /* 调大技术接口字体 */
       .text-api { fill: #0ea5e9; font-family: 'Courier New', monospace; font-size: 15px; font-weight: bold; }
       .line-main { fill: none; stroke: #cbd5e1; stroke-width: 2.5; }
       .core-box { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 1.5; }
@@ -31,96 +28,96 @@
   <rect width="100%" height="100%" fill="url(#grid)" />
 
   <g transform="translate(0, 40)">
-    <g transform="translate(350, 0)">
-      <rect width="200" height="100" rx="12" class="panel-bg" stroke="#f59e0b" filter="url(#glow)"/>
-      <text x="100" y="35" text-anchor="middle" class="text-label">MQTT 适配器</text>
-      <text x="100" y="65" text-anchor="middle" class="text-detail">认证 • 限流</text>
-      <text x="100" y="85" text-anchor="middle" class="text-detail">动态主题挂载</text>
-      <path id="up_l1" d="M100 130 V100" class="line-main"/>
+    <g transform="translate(340, 0)">
+      <rect width="210" height="105" rx="12" class="panel-bg" stroke="#f59e0b" filter="url(#glow)"/>
+      <text x="105" y="35" text-anchor="middle" class="text-label">MQTT 适配器</text>
+      <text x="105" y="65" text-anchor="middle" class="text-detail">认证 • 限流</text>
+      <text x="105" y="88" text-anchor="middle" class="text-detail">动态主题挂载</text>
+      <path id="up_l1" d="M105 135 V105" class="line-main"/>
       <circle r="4" fill="#f59e0b"><animateMotion dur="1.2s" repeatCount="indefinite"><mpath href="#up_l1"/></animateMotion></circle>
     </g>
-    <g transform="translate(600, 0)">
-      <rect width="200" height="100" rx="12" class="panel-bg" stroke="#0ea5e9" filter="url(#glow)"/>
-      <text x="100" y="35" text-anchor="middle" class="text-label">OPC UA 服务端</text>
-      <text x="100" y="65" text-anchor="middle" class="text-detail">审计日志 • 鉴权</text>
-      <text x="100" y="85" text-anchor="middle" class="text-detail">一致性校验</text>
-      <path id="up_l2" d="M100 130 V100" class="line-main"/>
+    <g transform="translate(595, 0)">
+      <rect width="210" height="105" rx="12" class="panel-bg" stroke="#0ea5e9" filter="url(#glow)"/>
+      <text x="105" y="35" text-anchor="middle" class="text-label">OPC UA 服务端</text>
+      <text x="105" y="65" text-anchor="middle" class="text-detail">审计日志 • 鉴权</text>
+      <text x="105" y="88" text-anchor="middle" class="text-detail">一致性校验</text>
+      <path id="up_l2" d="M105 135 V105" class="line-main"/>
       <circle r="4" fill="#0ea5e9"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#up_l2"/></animateMotion></circle>
     </g>
     <g transform="translate(850, 0)">
-      <rect width="200" height="100" rx="12" class="panel-bg" stroke="#8b5cf6" filter="url(#glow)"/>
-      <text x="100" y="35" text-anchor="middle" class="text-label">REST/HTTP(S)</text>
-      <text x="100" y="65" text-anchor="middle" class="text-detail">API 密钥 • TLS 加密</text>
-      <text x="100" y="85" text-anchor="middle" class="text-detail">审计日志</text>
-      <path id="up_l3" d="M100 130 V100" class="line-main"/>
+      <rect width="210" height="105" rx="12" class="panel-bg" stroke="#8b5cf6" filter="url(#glow)"/>
+      <text x="105" y="35" text-anchor="middle" class="text-label">REST/HTTP(S)</text>
+      <text x="105" y="65" text-anchor="middle" class="text-detail">API 密钥 • TLS</text>
+      <text x="105" y="88" text-anchor="middle" class="text-detail">审计日志</text>
+      <path id="up_l3" d="M105 135 V105" class="line-main"/>
       <circle r="4" fill="#8b5cf6"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#up_l3"/></animateMotion></circle>
     </g>
-    <path d="M450 130 H950" class="line-main" />
+    <path d="M445 135 H955" class="line-main" />
   </g>
 
-  <text x="710" y="200" class="text-api" text-anchor="middle">影子服务接口: 读 / 写 / 订阅 (Shadow Service API)</text>
+  <text x="700" y="200" class="text-api" text-anchor="middle">影子服务接口: 读 / 写 / 订阅 (Shadow Service API)</text>
 
-  <g transform="translate(400, 240)">
-    <rect width="600" height="220" rx="10" class="panel-bg" stroke="#64748b" filter="url(#glow)" />
-    <text x="300" y="40" text-anchor="middle" class="text-label" style="font-size: 22px;">影子核心 (内部模型中心)</text>
+  <g transform="translate(300, 240)">
+    <rect width="800" height="230" rx="12" class="panel-bg" stroke="#64748b" filter="url(#glow)" />
+    <text x="400" y="40" text-anchor="middle" class="text-label" style="font-size: 22px;">影子核心 (内部模型中心)</text>
     
-    <rect x="30" y="65" width="260" height="60" rx="6" class="core-box" />
-    <text x="160" y="90" text-anchor="middle" class="text-detail" font-weight="bold">真实影子存储 (内存 + WAL)</text>
-    <rect x="80" y="105" width="160" height="6" rx="3" fill="#e2e8f0" />
-    <rect x="80" y="105" width="80" height="6" rx="3" fill="#38bdf8"><animate attributeName="width" values="40;160;40" dur="3s" repeatCount="indefinite"/></rect>
+    <rect x="50" y="70" width="340" height="70" rx="6" class="core-box" />
+    <text x="220" y="100" text-anchor="middle" class="text-detail" font-weight="bold">真实影子存储 (Memory + WAL)</text>
+    <rect x="140" y="115" width="160" height="6" rx="3" fill="#e2e8f0" />
+    <rect x="140" y="115" width="80" height="6" rx="3" fill="#38bdf8"><animate attributeName="width" values="40;160;40" dur="3s" repeatCount="indefinite"/></rect>
 
-    <rect x="310" y="65" width="260" height="60" rx="6" class="core-box" />
-    <text x="440" y="90" text-anchor="middle" class="text-detail" font-weight="bold">虚拟影子 (公式计算图)</text>
-    <circle cx="530" cy="100" r="7" fill="#8b5cf6" opacity="0.6"><animate attributeName="r" values="4;8;4" dur="1s" repeatCount="indefinite"/></circle>
+    <rect x="410" y="70" width="340" height="70" rx="6" class="core-box" />
+    <text x="580" y="100" text-anchor="middle" class="text-detail" font-weight="bold">虚拟影子 (公式计算图)</text>
+    <circle cx="700" cy="110" r="7" fill="#8b5cf6" opacity="0.6"><animate attributeName="r" values="4;8;4" dur="1s" repeatCount="indefinite"/></circle>
 
-    <rect x="30" y="140" width="540" height="65" rx="6" class="core-box" />
-    <text x="285" y="168" text-anchor="middle" class="text-detail">边缘计算引擎 (滑动窗口 / 阈值 / 步长策略)</text>
-    <text x="285" y="190" text-anchor="middle" class="text-detail" fill="#059669" font-weight="bold">原子调度器: CAS + 序列号 + QoS ACK 确认机制</text>
+    <rect x="50" y="150" width="700" height="65" rx="6" class="core-box" />
+    <text x="400" y="178" text-anchor="middle" class="text-detail">边缘计算引擎 (滑动窗口 / 阈值 / 步长策略)</text>
+    <text x="400" y="200" text-anchor="middle" class="text-detail" fill="#059669" font-weight="bold">原子调度器: CAS + 序列号 + QoS ACK 确认机制</text>
   </g>
 
-  <text x="710" y="500" class="text-api" text-anchor="middle">影子数据入口 (Shadow Ingress)</text>
-  <path id="path_ingress" d="M700 460 V530" class="line-main" />
+  <text x="700" y="515" class="text-api" text-anchor="middle">影子数据入口 (Shadow Ingress)</text>
+  <path id="path_ingress" d="M700 470 V540" class="line-main" />
   <circle r="4" fill="#16a34a"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#path_ingress"/></animateMotion></circle>
 
-  <g transform="translate(400, 530)">
-    <rect width="600" height="90" rx="10" class="panel-bg" stroke="#16a34a" stroke-dasharray="6,3" />
-    <text x="300" y="35" text-anchor="middle" class="text-label">数据点层 (预处理标准化)</text>
-    <text x="300" y="68" text-anchor="middle" class="text-detail">归一化 • 单位转换 • 时间戳对齐 • 批量发布 (QoS 0/1/2)</text>
+  <g transform="translate(300, 540)">
+    <rect width="800" height="90" rx="12" class="panel-bg" stroke="#16a34a" stroke-dasharray="6,3" />
+    <text x="400" y="35" text-anchor="middle" class="text-label">数据点层 (预处理标准化)</text>
+    <text x="400" y="68" text-anchor="middle" class="text-detail">归一化 • 单位转换 • 时间戳对齐 • 批量发布 (QoS 0/1/2)</text>
   </g>
 
-  <path id="path_to_bus" d="M700 620 V680" class="line-main" />
-
-  <path id="bus_horizontal" d="M150 680 L1250 680" class="line-main" />
+  <path id="path_to_bus" d="M700 630 V690" class="line-main" />
+  <path id="bus_horizontal" d="M100 690 L1300 690" class="line-main" />
   
-  <g transform="translate(125, 750)">
+  <g transform="translate(100, 760)">
     <g transform="translate(0,0)">
-      <rect width="160" height="70" rx="6" class="panel-bg" stroke="#f59e0b" filter="url(#glow)" /><text x="80" y="42" text-anchor="middle" class="text-label">MODBUS</text>
-      <path id="l1" d="M80 0 V-70" class="line-main"/><circle r="3" fill="#f59e0b"><animateMotion dur="1s" repeatCount="indefinite"><mpath href="#l1"/></animateMotion></circle>
+      <rect width="180" height="80" rx="8" class="panel-bg" stroke="#f59e0b" filter="url(#glow)" /><text x="90" y="45" text-anchor="middle" class="text-label">MODBUS</text>
+      <path id="l1" d="M90 0 V-70" class="line-main"/><circle r="3" fill="#f59e0b"><animateMotion dur="1s" repeatCount="indefinite"><mpath href="#l1"/></animateMotion></circle>
     </g>
-    <g transform="translate(190,0)">
-      <rect width="160" height="70" rx="6" class="panel-bg" stroke="#0ea5e9" filter="url(#glow)" /><text x="80" y="42" text-anchor="middle" class="text-label">CAN 总线</text>
-      <path id="l2" d="M80 0 V-70" class="line-main"/><circle r="3" fill="#0ea5e9"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#l2"/></animateMotion></circle>
+    <g transform="translate(204,0)">
+      <rect width="180" height="80" rx="8" class="panel-bg" stroke="#0ea5e9" filter="url(#glow)" /><text x="90" y="45" text-anchor="middle" class="text-label">CAN 总线</text>
+      <path id="l2" d="M90 0 V-70" class="line-main"/><circle r="3" fill="#0ea5e9"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#l2"/></animateMotion></circle>
     </g>
-    <g transform="translate(380,0)">
-      <rect width="160" height="70" rx="6" class="panel-bg" stroke="#ec4899" filter="url(#glow)" /><text x="80" y="42" text-anchor="middle" class="text-label">OPC-UA</text>
-      <path id="l3" d="M80 0 V-70" class="line-main"/><circle r="3" fill="#ec4899"><animateMotion dur="1.3s" repeatCount="indefinite"><mpath href="#l3"/></animateMotion></circle>
+    <g transform="translate(408,0)">
+      <rect width="180" height="80" rx="8" class="panel-bg" stroke="#ec4899" filter="url(#glow)" /><text x="90" y="45" text-anchor="middle" class="text-label">OPC-UA</text>
+      <path id="l3" d="M90 0 V-70" class="line-main"/><circle r="3" fill="#ec4899"><animateMotion dur="1.3s" repeatCount="indefinite"><mpath href="#l3"/></animateMotion></circle>
     </g>
-    <g transform="translate(570,0)">
-      <rect width="160" height="70" rx="6" class="panel-bg" stroke="#16a34a" filter="url(#glow)" /><text x="80" y="42" text-anchor="middle" class="text-label">BACNET</text>
-      <path id="l4" d="M80 0 V-70" class="line-main"/><circle r="3" fill="#16a34a"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#l4"/></animateMotion></circle>
+    <g transform="translate(612,0)">
+      <rect width="180" height="80" rx="8" class="panel-bg" stroke="#16a34a" filter="url(#glow)" /><text x="90" y="45" text-anchor="middle" class="text-label">BACNET</text>
+      <path id="l4" d="M90 0 V-70" class="line-main"/><circle r="3" fill="#16a34a"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#l4"/></animateMotion></circle>
     </g>
-    <g transform="translate(760,0)">
-      <rect width="160" height="70" rx="6" class="panel-bg" stroke="#eab308" filter="url(#glow)" /><text x="80" y="42" text-anchor="middle" class="text-label">SNMP</text>
-      <path id="l5" d="M80 0 V-70" class="line-main"/><circle r="3" fill="#eab308"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#l5"/></animateMotion></circle>
+    <g transform="translate(816,0)">
+      <rect width="180" height="80" rx="8" class="panel-bg" stroke="#eab308" filter="url(#glow)" /><text x="90" y="45" text-anchor="middle" class="text-label">SNMP</text>
+      <path id="l5" d="M90 0 V-70" class="line-main"/><circle r="3" fill="#eab308"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#l5"/></animateMotion></circle>
     </g>
-    <g transform="translate(950,0)">
-      <rect width="160" height="70" rx="6" class="panel-bg" stroke="#8b5cf6" filter="url(#glow)" /><text x="80" y="42" text-anchor="middle" class="text-label">西门子 S7</text>
-      <path id="l6" d="M80 0 V-70" class="line-main"/><circle r="3" fill="#8b5cf6"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#l6"/></animateMotion></circle>
+    <g transform="translate(1020,0)">
+      <rect width="180" height="80" rx="8" class="panel-bg" stroke="#8b5cf6" filter="url(#glow)" /><text x="90" y="45" text-anchor="middle" class="text-label">西门子 S7</text>
+      <path id="l6" d="M90 0 V-70" class="line-main"/><circle r="3" fill="#8b5cf6"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#l6"/></animateMotion></circle>
     </g>
   </g>
 
-  <path id="ctrl_flow" d="M1100 350 H1320 V950 H80 V350 H400" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="12,6" opacity="0.2"/>
-  <circle r="3" fill="#16a34a"><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#ctrl_flow"/></animateMotion></circle>
-  <text x="700" y="940" text-anchor="middle" class="text-detail" style="fill: #16a34a; font-weight: bold;">双向控制通道 (COLLECT_CTRL) / 参数热更新流</text>
+  <path id="ctrl_flow" d="M1100 355 H1320 V960 H80 V355 H300" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="12,6" opacity="0.25"/>
+  <circle r="4" fill="#16a34a"><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#ctrl_flow"/></animateMotion></circle>
+  
+  <text x="700" y="950" text-anchor="middle" class="text-detail" style="fill: #16a34a; font-weight: bold; font-size: 16px;">双向控制通道 (COLLECT_CTRL) / 参数热更新闭环</text>
 
 </svg>
