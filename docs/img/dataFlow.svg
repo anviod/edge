@@ -132,7 +132,7 @@
   </g>
   <g transform="translate(550, 160)">
     <rect width="300" height="70" rx="8" class="panel-bg" stroke="#4ade80" />
-    <text x="150" y="42" text-anchor="middle" class="text-label">IOT GATEWAY</text>
+    <text x="150" y="42" text-anchor="middle" class="text-label">Industrial Edge Gateway</text>
   </g>
 
   <circle r="3" fill="#f1f5f9" filter="url(#glow)"><animateMotion dur="4s" repeatCount="indefinite"><mpath href="#path_main_bus"/></animateMotion></circle>
