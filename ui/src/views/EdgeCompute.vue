@@ -271,10 +271,20 @@
                 <div class="form-section">
                     <div class="section-header-row">
                         <div class="section-title">数据源 Sources</div>
-                        <a-button type="primary" size="small" @click="addSource">
-                            <template #icon><IconPlus /></template>
-                            添加
-                        </a-button>
+                        <div class="flex gap-2">
+                            <a-button type="outline" size="small" @click="detectInvalidSources">
+                                <template #icon><IconRefresh /></template>
+                                自动检测
+                            </a-button>
+                            <a-button type="outline" status="danger" size="small" @click="clearInvalidSources">
+                                <template #icon><IconDelete /></template>
+                                一键清除
+                            </a-button>
+                            <a-button type="primary" size="small" @click="addSource">
+                                <template #icon><IconPlus /></template>
+                                添加
+                            </a-button>
+                        </div>
                     </div>
                     <div class="text-gray-500 text-sm mb-4">
                         请为每个数据源设置别名（如 t1, t2），然后在触发条件中使用别名编写逻辑公式（例如：t1 > 20 || t2 > 30）。
@@ -282,23 +292,19 @@
                     <div v-for="(src, index) in currentRule.sources" :key="index" class="source-row">
                         <div class="source-index">#{{ index + 1 }}</div>
                         <a-row :gutter="12" class="flex-1">
-                            <a-col :span="24" :md="4">
+                            <a-col :span="24" :md="5">
                                 <a-select
                                     v-model="src.channel_id"
                                     :options="channels"
-                                    :label-field="'name'"
-                                    :value-field="'id'"
                                     placeholder="通道"
                                     class="rect-input"
                                     @change="() => onSourceChannelChange(src)"
                                 />
                             </a-col>
-                            <a-col :span="24" :md="4">
+                            <a-col :span="24" :md="5">
                                 <a-select
                                     v-model="src.device_id"
                                     :options="src._deviceList || []"
-                                    :label-field="'name'"
-                                    :value-field="'id'"
                                     placeholder="设备"
                                     class="rect-input"
                                     :disabled="!src.channel_id"
@@ -306,29 +312,29 @@
                                     @click="() => loadSourceDevices(src)"
                                 />
                             </a-col>
-                            <a-col :span="24" :md="4">
+                            <a-col :span="24" :md="5">
                                 <a-select
                                     v-model="src.point_id"
                                     :options="src._pointList || []"
-                                    :label-field="'name'"
-                                    :value-field="'id'"
                                     placeholder="点位"
                                     class="rect-input"
                                     :disabled="!src.device_id"
                                     @click="() => loadSourcePoints(src)"
                                 />
                             </a-col>
-                            <a-col :span="24" :md="3">
+                            <a-col :span="24" :md="7">
                                 <a-input 
                                     v-model="src.alias" 
                                     placeholder="t1"
-                                    class="rect-input"
+                                    class="rect-input w-full"
                                 />
                             </a-col>
+                            <a-col :span="24" :md="2" class="flex items-center justify-end">
+                                <a-button type="text" status="danger" @click="removeSource(index)">
+                                    <IconDelete />
+                                </a-button>
+                            </a-col>
                         </a-row>
-                        <a-button type="text" status="danger" @click="removeSource(index)">
-                            <IconDelete />
-                        </a-button>
                     </div>
                 </div>
 
@@ -413,10 +419,20 @@
                 <div class="form-section">
                     <div class="section-header-row">
                         <div class="section-title">执行动作 (Action)</div>
-                        <a-button type="primary" size="small" @click="addAction">
-                            <template #icon><IconPlus /></template>
-                            添加动作
-                        </a-button>
+                        <div class="flex gap-2">
+                            <a-button type="outline" size="small" @click="detectInvalidActions">
+                                <template #icon><IconRefresh /></template>
+                                自动检测
+                            </a-button>
+                            <a-button type="outline" status="danger" size="small" @click="clearInvalidActions">
+                                <template #icon><IconDelete /></template>
+                                一键清除
+                            </a-button>
+                            <a-button type="primary" size="small" @click="addAction">
+                                <template #icon><IconPlus /></template>
+                                添加动作
+                            </a-button>
+                        </div>
                     </div>
                     <div v-if="!currentRule.actions || currentRule.actions.length === 0" class="empty-box">
                         无动作
@@ -723,7 +739,7 @@ const logicalFunctions = [
   { function: '<code>lt(a, b)</code>', description: '小于', example: '<code>lt(v, 50)</code>' },
   { function: '<code>le(a, b)</code>', description: '小于等于', example: '<code>le(v, 50)</code>' }
 ]
-import { ref, reactive, computed, onMounted, onUnmounted, provide } from 'vue'
+import { ref, reactive, computed, watch, watchEffect, onMounted, onUnmounted, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import request from '@/utils/request'
 import { base64ToUint8Array, uint8ArrayToHex, detectFileType, downloadBytes } from '@/utils/decode'
@@ -787,6 +803,62 @@ const ruleStates = ref([])
 const dialog = ref(false)
 const helpDialog = ref(false)
 const editingRule = ref(false)
+// Northbound Config for Actions
+const northboundConfig = ref({ mqtt: [], http: [] })
+
+// MQTT Options for Select
+const mqttOptions = computed(() => {
+    const cfg = northboundConfig.value || {}
+    const list = Array.isArray(cfg.mqtt) ? cfg.mqtt : []
+    const status = cfg.status || {}
+
+    const options = list
+        .filter(item => item.enable)   // ✅ 只要启用的
+        .map(item => ({
+            label: `${item.name || item.id}${status[item.id] === 3 ? '' : ' (离线)'}`,
+            value: item.id,
+            disabled: status[item.id] !== 3   // ✅ 工业级：离线不可选
+        }))
+
+    // ✅ 强制兜底（关键：保证一定有 Default MQTT）
+    if (!options.find(o => o.label.includes('Default MQTT'))) {
+        options.unshift({
+            label: 'Default MQTT',
+            value: 'mqtt-1'
+        })
+    }
+
+    return options
+})
+
+// HTTP Options for Select
+const httpOptions = computed(() => {
+    const cfg = northboundConfig.value || {}
+    const list = Array.isArray(cfg.http) ? cfg.http : []
+    const status = cfg.status || {}
+
+    const options = list
+        .filter(item => item.enable)   // ✅ 只要启用的
+        .map(item => ({
+            label: `${item.name || item.id}${status[item.id] === 3 ? '' : ' (离线)'}`,
+            value: item.id,
+            disabled: status[item.id] !== 3   // ✅ 工业级：离线不可选
+        }))
+
+    return options
+})
+
+// Provide only UI data
+provide('mqttOptions', mqttOptions)
+provide('httpOptions', httpOptions)
+
+// Debug
+watchEffect(() => {
+    console.log('northboundConfig:', northboundConfig.value)
+    console.log('mqttOptions:', mqttOptions.value)
+    console.log('httpOptions:', httpOptions.value)
+})
+
 const selectedRuleKeys = ref([]) // 批量选择存储
 
 const channels = ref([])
@@ -796,10 +868,6 @@ const windowData = ref([])
 const currentWindowRuleName = ref('')
 let timer = null
 
-// Northbound Config for Actions
-const northboundConfig = ref({ mqtt: [], http: [] })
-provide('northboundConfig', northboundConfig)
-
 const fetchNorthboundConfig = async () => {
     try {
         const data = await request.get('/api/northbound/config')
@@ -807,7 +875,7 @@ const fetchNorthboundConfig = async () => {
             northboundConfig.value = {
                 mqtt: data.mqtt || [],
                 http: data.http || [],
-                // opcua/sparkplug ignored for now as they are servers
+                status: data.status || {}
             }
         }
     } catch (e) {
@@ -921,7 +989,11 @@ const fetchChannels = async () => {
     try {
         const data = await request.get('/api/channels')
         if (data) {
-            channels.value = data
+            channels.value = (data || []).map(ch => ({
+                label: ch.name || ch.channel_name || ch.id,
+                value: ch.id,
+                raw: ch
+            }))
         }
     } catch (e) {
         console.error(e)
@@ -945,6 +1017,41 @@ const removeSource = (index) => {
     currentRule.sources.splice(index, 1)
 }
 
+const detectInvalidSources = () => {
+    if (!currentRule.sources) return
+    
+    let invalidCount = 0
+    currentRule.sources.forEach((src, index) => {
+        const isInvalid = !src.channel_id || !src.device_id || !src.point_id || !src.alias
+        if (isInvalid) {
+            invalidCount++
+        }
+    })
+    
+    if (invalidCount > 0) {
+        alert(`检测到 ${invalidCount} 个失效配置，请点击"一键清除"按钮清理`)
+    } else {
+        alert('所有数据源配置均有效')
+    }
+}
+
+const clearInvalidSources = () => {
+    if (!currentRule.sources) return
+    
+    const validSources = currentRule.sources.filter(src => 
+        src.channel_id && src.device_id && src.point_id && src.alias
+    )
+    
+    const removedCount = currentRule.sources.length - validSources.length
+    currentRule.sources = validSources
+    
+    if (removedCount > 0) {
+        alert(`已清除 ${removedCount} 个失效配置`)
+    } else {
+        alert('没有发现失效配置')
+    }
+}
+
 const onSourceChannelChange = async (src) => {
     src.device_id = ''
     src.point_id = ''
@@ -956,7 +1063,11 @@ const onSourceChannelChange = async (src) => {
     try {
         const data = await request.get(`/api/channels/${src.channel_id}/devices`)
         if (data) {
-            src._deviceList = data
+            src._deviceList = (Array.isArray(data) ? data : []).map(d => ({
+                label: d.name || d.device_name || d.id,
+                value: d.id,
+                raw: d
+            }))
         }
     } catch (e) {
         console.error(e)
@@ -970,10 +1081,14 @@ const onSourceDeviceChange = (src) => {
 }
 
 const updateSourcePointList = (src) => {
-    if (!src.device_id || !src._deviceList) return
-    const dev = src._deviceList.find(d => d.id === src.device_id)
-    if (dev && dev.points) {
-        src._pointList = dev.points
+    if (!src.device_id || !src._deviceList || !Array.isArray(src._deviceList)) return
+    const dev = src._deviceList.find(d => d.value === src.device_id)
+    if (dev && dev.raw && dev.raw.points) {
+        src._pointList = (dev.raw.points || []).map(p => ({
+            label: p.name || p.point_name || p.id,
+            value: p.id,
+            raw: p
+        }))
     } else {
         src._pointList = []
     }
@@ -1082,6 +1197,59 @@ const addAction = () => {
 
 const removeAction = (index) => {
     currentRule.actions.splice(index, 1)
+}
+
+const detectInvalidActions = () => {
+    if (!currentRule.actions) return
+    
+    let invalidCount = 0
+    currentRule.actions.forEach(action => {
+        const isInvalid = isActionInvalid(action)
+        if (isInvalid) {
+            invalidCount++
+        }
+    })
+    
+    if (invalidCount > 0) {
+        alert(`检测到 ${invalidCount} 个失效动作配置，请点击"一键清除"按钮清理`)
+    } else {
+        alert('所有动作配置均有效')
+    }
+}
+
+const clearInvalidActions = () => {
+    if (!currentRule.actions) return
+    
+    const validActions = currentRule.actions.filter(action => !isActionInvalid(action))
+    const removedCount = currentRule.actions.length - validActions.length
+    currentRule.actions = validActions
+    
+    if (removedCount > 0) {
+        alert(`已清除 ${removedCount} 个失效动作配置`)
+    } else {
+        alert('没有发现失效动作配置')
+    }
+}
+
+const isActionInvalid = (action) => {
+    if (!action.type) return true
+    
+    switch (action.type) {
+        case 'mqtt':
+            return !action.config.mqtt_id
+        case 'http':
+            return !action.config.http_id
+        case 'device_control':
+            return !action.config.channel_id || !action.config.device_id || !action.config.point_id
+        case 'check':
+            return !action.config.condition
+        case 'delay':
+            return !action.config.duration
+        case 'sequence':
+            return !action.config.steps || !Array.isArray(action.config.steps) || action.config.steps.length === 0
+        default:
+            return false
+    }
 }
 
 const openDialog = () => {

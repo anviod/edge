@@ -61,9 +61,7 @@
 
           <div class="text-caption text-grey-darken-1">
             <v-icon size="x-small">mdi-lan-connect</v-icon>
-            本地 {{ metrics?.localIp || '-' }}:{{ metrics?.localPort || '-' }}
-            →
-            目标 {{ metrics?.remoteIp || '-' }}:{{ metrics?.remotePort || '-' }}
+            {{ getNetworkConnectionText() }}
           </div>
         </div>
 
@@ -107,6 +105,36 @@
               :class="getPacketLossColor(metrics?.packetLoss)"
             >
               {{ formatPercent(metrics?.packetLoss) }}
+            </div>
+          </div>
+        </v-col>
+      </v-row>
+
+      <!-- 通信计数指标 -->
+      <v-row dense class="metrics-counts" v-if="showDetails">
+        <v-col cols="4">
+          <div class="metric-item text-center">
+            <div class="text-caption text-grey-darken-1">总请求数</div>
+            <div class="text-body-1 font-weight-bold">
+              {{ metrics?.totalRequests || 0 }}
+            </div>
+          </div>
+        </v-col>
+
+        <v-col cols="4">
+          <div class="metric-item text-center">
+            <div class="text-caption text-grey-darken-1">成功次数</div>
+            <div class="text-body-1 font-weight-bold text-success">
+              {{ metrics?.successCount || 0 }}
+            </div>
+          </div>
+        </v-col>
+
+        <v-col cols="4">
+          <div class="metric-item text-center">
+            <div class="text-caption text-grey-darken-1">失败次数</div>
+            <div class="text-body-1 font-weight-bold text-error">
+              {{ metrics?.failureCount || 0 }}
             </div>
           </div>
         </v-col>
@@ -163,6 +191,84 @@ const connectionDuration = computed(() => {
 })
 
 /* =======================
+   网络地址信息
+======================= */
+const networkInfo = computed(() => {
+  if (!props.metrics) {
+    return { localIp: '-', localPort: '-', remoteIp: '-', remotePort: '-' }
+  }
+  
+  // 优先使用分开的字段
+  let localIp = props.metrics.localIp || props.metrics.local_ip
+  let localPort = props.metrics.localPort || props.metrics.local_port
+  let remoteIp = props.metrics.remoteIp || props.metrics.remote_ip
+  let remotePort = props.metrics.remotePort || props.metrics.remote_port
+  
+  // 辅助函数：解析地址字符串（处理IP:Port格式）
+  const parseAddressString = (addrStr) => {
+    if (!addrStr) return { ip: '-', port: '-' }
+    
+    // 去掉协议前缀
+    let addr = addrStr
+    if (addr.includes('://')) {
+      addr = addr.split('://')[1] || addr
+    }
+    
+    // 提取IP和端口
+    // 处理IPv6 [::1]:8080 这种格式
+    if (addr.startsWith('[')) {
+      const bracketIdx = addr.indexOf(']')
+      if (bracketIdx > 0) {
+        const ip = addr.substring(1, bracketIdx)
+        const rest = addr.substring(bracketIdx + 1)
+        if (rest.startsWith(':')) {
+          return { ip, port: rest.substring(1).split('/')[0] }
+        }
+        return { ip, port: '-' }
+      }
+    }
+    
+    // 处理普通IPv4格式 IP:Port 或 包含路径的格式 IP:Port/Path
+    const colonIdx = addr.lastIndexOf(':')
+    if (colonIdx > 0) {
+      const ip = addr.substring(0, colonIdx)
+      let port = addr.substring(colonIdx + 1)
+      
+      // 处理包含路径的情况
+      const slashIdx = port.indexOf('/')
+      if (slashIdx > 0) {
+        port = port.substring(0, slashIdx)
+      }
+      
+      return { ip, port }
+    }
+    
+    // 如果找不到冒号，整个字符串作为IP
+    return { ip: addr, port: '-' }
+  }
+  
+  // 如果没有分开的字段，尝试解析 localAddr 和 remoteAddr
+  if (!localIp && props.metrics.localAddr) {
+    const parsed = parseAddressString(props.metrics.localAddr)
+    localIp = parsed.ip
+    localPort = parsed.port
+  }
+  
+  if (!remoteIp && props.metrics.remoteAddr) {
+    const parsed = parseAddressString(props.metrics.remoteAddr)
+    remoteIp = parsed.ip
+    remotePort = parsed.port
+  }
+  
+  return {
+    localIp: localIp || '-',
+    localPort: localPort || '-',
+    remoteIp: remoteIp || '-',
+    remotePort: remotePort || '-'
+  }
+})
+
+/* =======================
    质量等级
 ======================= */
 const getQualityLabel = (score) => {
@@ -177,6 +283,38 @@ const getQualityColor = (score) => {
   if (score >= 75) return 'info'
   if (score >= 60) return 'warning'
   return 'error'
+}
+
+const getNetworkConnectionText = () => {
+  if (!props.metrics) {
+    return '暂无网络连接信息'
+  }
+  
+  // 获取本地和远程地址信息，确保没有undefined
+  const info = networkInfo
+  const localIp = info.localIp || '-'
+  const localPort = info.localPort || '-'
+  const remoteIp = info.remoteIp || '-'
+  const remotePort = info.remotePort || '-'
+  
+  const local = `${localIp}:${localPort}`
+  
+  // 检查remoteAddr是否是IP:Port格式
+  const remoteAddr = props.metrics.remoteAddr
+  if (remoteAddr && remoteAddr.includes(':')) {
+    const parts = remoteAddr.split(':')
+    if (parts.length >= 2 && !isNaN(parts[1])) {
+      // 是IP:Port格式
+      return `本地 ${local} → 目标 ${remoteIp}:${remotePort}`
+    }
+  }
+  
+  // 不是标准IP:Port格式，直接显示remoteAddr作为描述
+  if (remoteAddr && remoteAddr !== '') {
+    return `本地 ${local} → ${remoteAddr}`
+  }
+  
+  return `本地 ${local} → 目标 -:-`
 }
 
 /* =======================
@@ -253,6 +391,12 @@ const formatDuration = (ms) => {
 .metrics-summary {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 12px;
+}
+
+.metrics-counts {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+  margin-top: 8px;
 }
 
 .metric-item {

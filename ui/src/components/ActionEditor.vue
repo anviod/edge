@@ -297,11 +297,9 @@
                 <a-col :span="24" :md="8">
                     <a-form-item label="北向通道">
                         <a-select
-                            v-model="action.config.mqtt_config_id"
-                            :options="northboundConfig.mqtt"
-                            :label-field="'name'"
-                            :value-field="'id'"
-                            placeholder="选择北向 MQTT 配置"
+                            v-model="action.config.mqtt_id"
+                            :options="mqttOptions"
+                            placeholder="选择 MQTT 通道"
                             class="rect-input"
                             allow-clear
                         />
@@ -348,17 +346,15 @@
                 <a-col :span="24" :md="12">
                     <a-form-item label="北向通道 (Northbound Channel)">
                         <a-select
-                            v-model="action.config.http_config_id"
-                            :options="northboundConfig.http"
-                            :label-field="'name'"
-                            :value-field="'id'"
-                            placeholder="选择北向 HTTP 配置"
+                            v-model="action.config.http_id"
+                            :options="httpOptions"
+                            placeholder="选择 HTTP 通道"
                             class="rect-input"
                             allow-clear
                         />
                     </a-form-item>
                 </a-col>
-                <a-col :span="24" :md="6" v-if="!action.config.http_config_id">
+                <a-col :span="24" :md="6" v-if="!action.config.http_id">
                     <a-form-item label="Method">
                         <a-select 
                             v-model="action.config.method" 
@@ -411,7 +407,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, inject } from 'vue'
+import { ref, watch, onMounted, computed, inject } from 'vue'
 import request from '@/utils/request'
 import { IconDelete, IconPlus, IconClose } from '@arco-design/web-vue/es/icon'
 // Recursive component self-reference
@@ -435,8 +431,9 @@ const action = ref(props.modelValue)
 const deviceList = ref([])
 const pointList = ref([])
 
-// Inject Northbound Config
-const northboundConfig = inject('northboundConfig', ref({ mqtt: [], http: [] }))
+// Inject Options
+const mqttOptions = inject('mqttOptions', ref([]))
+const httpOptions = inject('httpOptions', ref([]))
 
 // Sync props to local state
 watch(() => props.modelValue, (val) => {
@@ -448,6 +445,8 @@ watch(() => props.modelValue, (val) => {
      loadDevices(action.value.config)
   }
 }, { deep: true })
+
+
 
 // Sync local state to props
 watch(action, (val) => {

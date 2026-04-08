@@ -1,0 +1,507 @@
+id: slave-4
+name: slave-4
+enable: true
+interval: 10s
+config:
+    slave_id: 4
+    start_address: 0
+storage:
+    enable: false
+    strategy: interval
+    interval: 1
+    max_records: 1000
+points:
+    - id: hr_40000
+      name: hr_40000
+      register_type: Holding Registers
+      function_code: 0
+      address: "0"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40001
+      name: HR 40001
+      register_type: Holding Registers
+      function_code: 0
+      address: "1"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40002
+      name: HR 40002
+      register_type: Holding Registers
+      function_code: 0
+      address: "2"
+      datatype: int32
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40004
+      name: HR 40004
+      register_type: Holding Registers
+      function_code: 0
+      address: "4"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40005
+      name: HR 40005
+      register_type: Holding Registers
+      function_code: 0
+      address: "5"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40006
+      name: HR 40006
+      register_type: Holding Registers
+      function_code: 0
+      address: "6"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40007
+      name: HR 40007
+      register_type: Holding Registers
+      function_code: 0
+      address: "7"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40008
+      name: HR 40008
+      register_type: Holding Registers
+      function_code: 0
+      address: "8"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40009
+      name: HR 40009
+      register_type: Holding Registers
+      function_code: 0
+      address: "9"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40010
+      name: HR 40010
+      register_type: Holding Registers
+      function_code: 0
+      address: "10"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40011
+      name: HR 40011
+      register_type: Holding Registers
+      function_code: 0
+      address: "11"
+      datatype: float64
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40015
+      name: HR 40015
+      register_type: Holding Registers
+      function_code: 0
+      address: "15"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40016
+      name: HR 40016
+      register_type: Holding Registers
+      function_code: 0
+      address: "16"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40017
+      name: HR 40017
+      register_type: Holding Registers
+      function_code: 0
+      address: "17"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40018
+      name: HR 40018
+      register_type: Holding Registers
+      function_code: 0
+      address: "18"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40019
+      name: HR 40019
+      register_type: Holding Registers
+      function_code: 0
+      address: "19"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40020
+      name: HR 40020
+      register_type: Holding Registers
+      function_code: 0
+      address: "20"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40021
+      name: HR 40021
+      register_type: Holding Registers
+      function_code: 0
+      address: "21"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40022
+      name: HR 40022
+      register_type: Holding Registers
+      function_code: 0
+      address: "22"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40023
+      name: HR 40023
+      register_type: Holding Registers
+      function_code: 0
+      address: "23"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40024
+      name: HR 40024
+      register_type: Holding Registers
+      function_code: 0
+      address: "24"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40025
+      name: HR 40025
+      register_type: Holding Registers
+      function_code: 0
+      address: "25"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40026
+      name: HR 40026
+      register_type: Holding Registers
+      function_code: 0
+      address: "26"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40027
+      name: HR 40027
+      register_type: Holding Registers
+      function_code: 0
+      address: "27"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40028
+      name: HR 40028
+      register_type: Holding Registers
+      function_code: 0
+      address: "28"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40029
+      name: HR 40029
+      register_type: Holding Registers
+      function_code: 0
+      address: "29"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40030
+      name: HR 40030
+      register_type: Holding Registers
+      function_code: 0
+      address: "30"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40031
+      name: HR 40031
+      register_type: Holding Registers
+      function_code: 0
+      address: "31"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40032
+      name: HR 40032
+      register_type: Holding Registers
+      function_code: 0
+      address: "32"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40033
+      name: HR 40033
+      register_type: Holding Registers
+      function_code: 0
+      address: "33"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40034
+      name: HR 40034
+      register_type: Holding Registers
+      function_code: 0
+      address: "34"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40035
+      name: HR 40035
+      register_type: Holding Registers
+      function_code: 0
+      address: "35"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40036
+      name: HR 40036
+      register_type: Holding Registers
+      function_code: 0
+      address: "36"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40037
+      name: HR 40037
+      register_type: Holding Registers
+      function_code: 0
+      address: "37"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40038
+      name: HR 40038
+      register_type: Holding Registers
+      function_code: 0
+      address: "38"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40039
+      name: HR 40039
+      register_type: Holding Registers
+      function_code: 0
+      address: "39"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40040
+      name: HR 40040
+      register_type: Holding Registers
+      function_code: 0
+      address: "40"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_40041
+      name: HR 40041
+      register_type: Holding Registers
+      function_code: 0
+      address: "41"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null

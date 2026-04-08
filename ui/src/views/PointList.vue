@@ -276,198 +276,33 @@
                         </a-form-item>
                     </a-col>
 
-                    <!-- Modbus Specific -->
-                    <template v-if="channelProtocol.startsWith('modbus')">
-                        <a-col :span="12">
-                            <a-form-item field="registerType" label="寄存器类型">
-                                <a-select
-                                    v-model="pointDialog.registerType"
-                                    :options="registerTypes"
-                                    @update:value="updateAddress"
-                                ></a-select>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-form-item field="registerIndex" label="寄存器索引">
-                                <a-input
-                                    v-model.number="pointDialog.registerIndex"
-                                    type="number"
-                                    :min="getRegisterIndexMin()"
-                                    :max="getRegisterIndexMax()"
-                                    :error-message="registerIndexError"
-                                    @input="validateRegisterIndex; updateAddress"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-form-item field="registerOffset" label="起始偏移量">
-                                <a-input
-                                    v-model.number="pointDialog.registerOffset"
-                                    type="number"
-                                    min="0"
-                                    max="9999"
-                                    :error-message="registerOffsetError"
-                                    :tooltip="'数据读取起始偏移量 (默认: 0)'"
-                                    @input="validateRegisterOffset; updateAddress"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-form-item field="address" label="Modbus 地址">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    :tooltip="'自动生成 (例如: 40001)'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-form-item field="functionCode" label="功能码">
-                                <a-input
-                                    v-model.number="pointDialog.functionCode"
-                                    type="number"
-                                    min="1"
-                                    max="255"
-                                    :tooltip="'默认: 根据寄存器类型自动确定'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- BACnet Specific -->
-                    <template v-else-if="channelProtocol === 'bacnet-ip'">
-                        <a-col :span="12">
-                            <a-form-item field="bacnetType" label="对象类型">
-                                <a-select
-                                    v-model="pointDialog.bacnetType"
-                                    :options="bacnetObjectTypes"
-                                    @update:value="updateBACnetAddress"
-                                ></a-select>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-form-item field="bacnetInstance" label="实例 ID">
-                                <a-input
-                                    v-model.number="pointDialog.bacnetInstance"
-                                    type="number"
-                                    min="0"
-                                    @input="updateBACnetAddress"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="24">
-                            <a-form-item field="address" label="BACnet 地址">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    readonly
-                                    :tooltip="'格式: Type:Instance'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- OPC UA Specific -->
-                    <template v-else-if="channelProtocol === 'opc-ua'">
-                        <a-col :span="24">
-                            <a-form-item field="address" label="Node ID">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    placeholder="ns=2;s=Demo.Static.Scalar.Double"
-                                    :tooltip="'例如: ns=2;s=Demo...'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- S7 Specific -->
-                    <template v-else-if="channelProtocol === 's7'">
-                        <a-col :span="24">
-                            <a-form-item field="address" label="S7 地址">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    placeholder="DB1.DBD0"
-                                    :tooltip="'例如: DB1.DBD0, M0.0'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- EtherNet/IP Specific -->
-                    <template v-else-if="channelProtocol === 'ethernet-ip'">
-                        <a-col :span="24">
-                            <a-form-item field="address" label="Tag 名称">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    placeholder="Program:Main.MyTag"
-                                    :tooltip="'例如: Program:Main.MyTag'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- Mitsubishi Specific -->
-                    <template v-else-if="channelProtocol === 'mitsubishi-slmp'">
-                        <a-col :span="24">
-                            <a-form-item field="address" label="地址">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    placeholder="D100"
-                                    :tooltip="'格式: D100, M0, X0, D20.2, D100.16L'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- Omron FINS Specific -->
-                    <template v-else-if="channelProtocol === 'omron-fins'">
-                        <a-col :span="24">
-                            <a-form-item field="address" label="地址">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    placeholder="D100"
-                                    :tooltip="'格式: CIO1.2, D100, W3.4, EM10.100'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- DL/T645 Specific -->
-                    <template v-else-if="channelProtocol === 'dlt645'">
-                        <a-col :span="12">
-                            <a-form-item field="dlt645DeviceAddr" label="设备地址">
-                                <a-input
-                                    v-model="pointDialog.dlt645DeviceAddr"
-                                    :tooltip="'通常与设备配置一致'"
-                                    @input="updateDLT645Address"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-form-item field="dlt645DataID" label="数据标识 (DI)">
-                                <a-input
-                                    v-model="pointDialog.dlt645DataID"
-                                    placeholder="02-01-01-00"
-                                    :tooltip="'格式: XX-XX-XX-XX'"
-                                    @input="updateDLT645Address"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                        <a-col :span="24">
-                            <a-form-item field="address" label="完整地址">
-                                <a-input
-                                    v-model="pointDialog.form.address"
-                                    readonly
-                                    :tooltip="'格式: 设备地址#数据标识'"
-                                ></a-input>
-                            </a-form-item>
-                        </a-col>
-                    </template>
-
-                    <!-- Fallback -->
+                    <!-- Protocol Specific Configuration -->
+                    <ModbusPointConfig
+                        v-if="channelProtocol.startsWith('modbus')"
+                        v-model:form="pointDialog.form"
+                        :device-info="deviceInfo"
+                    />
+                    
+                    <BacnetPointConfig
+                        v-else-if="channelProtocol === 'bacnet-ip'"
+                        v-model:form="pointDialog.form"
+                        :device-info="deviceInfo"
+                    />
+                    
+                    <OpcuaPointConfig
+                        v-else-if="channelProtocol === 'opc-ua'"
+                        v-model:form="pointDialog.form"
+                        :device-info="deviceInfo"
+                    />
+                    
+                    <!-- Other Protocols -->
                     <template v-else>
                         <a-col :span="24">
-                            <a-form-item field="address" label="地址">
+                            <a-form-item field="address" :label="getProtocolAddressLabel()">
                                 <a-input
                                     v-model="pointDialog.form.address"
+                                    :placeholder="getProtocolAddressPlaceholder()"
+                                    :tooltip="getProtocolAddressTooltip()"
                                 ></a-input>
                             </a-form-item>
                         </a-col>
@@ -983,30 +818,28 @@
 
 
         <!-- Delete Confirmation Dialog -->
-        <a-modal v-model="deleteDialog.visible" max-width="400">
-            <a-card class="rounded-xl">
-                <a-card-title class="text-h5 bg-error text-white pa-4">
-                    <IconCloseCircle class="mr-2" />
-                    确认删除
-                </a-card-title>
-                <a-card-text class="pa-6 text-center">
-
-                    <template v-if="deleteDialog.isBatch">
-                        确定要批量删除选中的 <span class="text-error font-weight-bold">{{ deleteDialog.batchCount }}</span> 个点位吗？
-                    </template>
-                    <template v-else>
-                        确定要删除点位 <span class="text-error font-weight-bold">{{ deleteDialog.point?.name || deleteDialog.point?.id }}</span> 吗？
-                    </template>
-                    <div class="mt-2 text-grey text-caption">此操作不可撤销。</div>
-                </a-card-text>
-                <div class="pa-4 pt-0" style="display: flex; justify-content: flex-end; border-top: 1px solid #e8e8e8;">
-
-                    <div style="flex: 1;"></div>
-                    <a-button type="outline" size="small" @click="deleteDialog.visible = false">取消</a-button>
-                    <a-button type="primary" size="small" class="ml-2" status="danger" @click="executeDelete" :loading="deleteDialog.loading">确认删除</a-button>
-
+        <a-modal v-model:visible="deleteDialog.visible" width="400px" @ok="executeDelete" @cancel="deleteDialog.visible = false">
+            <template #title>
+                <div class="flex items-center gap-2">
+                    <IconCloseCircle class="text-red-500" />
+                    <span>确认删除</span>
                 </div>
-            </a-card>
+            </template>
+            <div class="text-center py-4">
+                <template v-if="deleteDialog.isBatch">
+                    确定要批量删除选中的 <span class="text-red-500 font-bold">{{ deleteDialog.batchCount }}</span> 个点位吗？
+                </template>
+                <template v-else>
+                    确定要删除点位 <span class="text-red-500 font-bold">{{ deleteDialog.point?.name || deleteDialog.point?.id }}</span> 吗？
+                </template>
+                <div class="mt-2 text-gray-400 text-sm">此操作不可撤销。</div>
+            </div>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <a-button @click="deleteDialog.visible = false">取消</a-button>
+                    <a-button type="primary" status="danger" @click="executeDelete" :loading="deleteDialog.loading">确认删除</a-button>
+                </div>
+            </template>
         </a-modal>
 
         <!-- Write Dialog -->
@@ -1219,6 +1052,9 @@ import { Message } from '@arco-design/web-vue'
 import HelpDrawer from '../components/HelpDrawer.vue'
 import OpcuaScanner from '../components/OpcuaScanner.vue'
 import BACnetScanner from '../components/BACnetScanner.vue'
+import ModbusPointConfig from '../components/point-config/ModbusPointConfig.vue'
+import OpcuaPointConfig from '../components/point-config/OpcuaPointConfig.vue'
+import BacnetPointConfig from '../components/point-config/BacnetPointConfig.vue'
 
 
 import {
@@ -1288,6 +1124,7 @@ const rowSelection = reactive({
 
 // Helper functions
 const formatValue = (val) => {
+    if (val === null || val === undefined) return 'N/A'
     if (typeof val === 'number') return val.toFixed(2)
     return val
 }
@@ -1316,7 +1153,110 @@ const formatDate = (ts) => {
     }
 }
 
-const tableColumns = [
+const tableColumns = computed(() => {
+    const baseColumns = [
+        {
+            title: '点位ID',
+            dataIndex: 'id',
+            width: 120,
+            ellipsis: true,
+            tooltip: true
+        },
+        {
+            title: '点位名称',
+            dataIndex: 'name',
+            width: 150,
+            ellipsis: true,
+            tooltip: true
+        },
+        {
+            title: '读写权限',
+            slotName: 'readwrite',
+            width: 100,
+            ellipsis: true
+        },
+        {
+            title: '数值',
+            slotName: 'value',
+            width: 150,
+            ellipsis: true
+        },
+        {
+            title: '质量',
+            slotName: 'quality',
+            width: 140,
+            ellipsis: true
+        },
+        {
+            title: '时间戳',
+            slotName: 'timestamp',
+            width: 180,
+            ellipsis: true,
+            tooltip: true
+        },
+        {
+            title: '操作',
+            slotName: 'actions',
+            width: 260
+        }
+    ]
+    
+    // Add Modbus-specific columns for Modbus protocols
+    if (channelProtocol.value.startsWith('modbus')) {
+        return [
+            baseColumns[0],
+            baseColumns[1],
+            {
+                title: '寄存器地址',
+                dataIndex: 'address',
+                width: 120,
+                ellipsis: true,
+                tooltip: true,
+                customRender: ({ text }) => text || 'N/A'
+            },
+            {
+                title: '寄存器类型',
+                dataIndex: 'register_type',
+                width: 180,
+                ellipsis: true,
+                tooltip: true,
+                customRender: ({ text }) => {
+                    if (!text) return 'N/A'
+                    const lowerText = text.toLowerCase()
+                    if (lowerText.includes('holding')) return 'HOLDING_REGISTER (保持寄存器)'
+                    if (lowerText.includes('input')) return 'INPUT_REGISTER (输入寄存器)'
+                    if (lowerText.includes('coil')) return 'COIL (输出线圈)'
+                    if (lowerText.includes('discrete')) return 'DISCRETE_INPUT (离散输入)'
+                    return text
+                }
+            },
+            ...baseColumns.slice(2)
+        ]
+    }
+    
+    // For other protocols, add a generic address column
+    return [
+        baseColumns[0],
+        baseColumns[1],
+        {
+            title: getProtocolAddressLabel(),
+            dataIndex: 'address',
+            width: 200,
+            ellipsis: true,
+            tooltip: true,
+            customRender: ({ text }) => text || 'N/A'
+        },
+        ...baseColumns.slice(2)
+    ]
+})
+
+const cloneTableColumns = [
+    {
+        title: '选择',
+        slotName: 'checkbox',
+        width: 80,
+        fixed: 'left'
+    },
     {
         title: '点位ID',
         dataIndex: 'id',
@@ -1332,56 +1272,62 @@ const tableColumns = [
         tooltip: true
     },
     {
-        title: '读写权限',
-        slotName: 'readwrite',
-        width: 100,
-        ellipsis: true
-    },
-    {
-        title: '数值',
-        slotName: 'value',
+        title: '地址',
+        dataIndex: 'address',
         width: 150,
-        ellipsis: true
-    },
-    {
-        title: '质量',
-        slotName: 'quality',
-        width: 140,
-        ellipsis: true
-    },
-    {
-        title: '时间戳',
-        slotName: 'timestamp',
-        width: 180,
         ellipsis: true,
         tooltip: true
     },
     {
-        title: '操作',
-        slotName: 'actions',
-        width: 260
+        title: '数据类型',
+        dataIndex: 'datatype',
+        width: 100,
+        ellipsis: true
+    },
+    {
+        title: '单位',
+        dataIndex: 'unit',
+        width: 80,
+        ellipsis: true
+    },
+    {
+        title: '读写权限',
+        dataIndex: 'readwrite',
+        width: 100,
+        ellipsis: true
     }
 ]
 
 const filteredPoints = computed(() => {
-    let result = points.value || []
-    
-    // Search filter
-    if (filters.search) {
-        const s = filters.search.toLowerCase()
-        result = result.filter(p => 
-            (p.id && p.id.toLowerCase().includes(s)) ||
-            (p.name && p.name.toLowerCase().includes(s)) ||
-            (p.address && String(p.address).toLowerCase().includes(s))
-        )
+    try {
+        let result = points.value || []
+        
+        // Search filter
+        if (filters.search) {
+            const s = filters.search.toLowerCase()
+            result = result.filter(p => {
+                if (!p) return false
+                return (
+                    (p.id && typeof p.id === 'string' && p.id.toLowerCase().includes(s)) ||
+                    (p.name && typeof p.name === 'string' && p.name.toLowerCase().includes(s)) ||
+                    (p.address && String(p.address).toLowerCase().includes(s))
+                )
+            })
+        }
+        
+        // Quality filter
+        if (filters.quality && filters.quality.length > 0) {
+            result = result.filter(p => {
+                if (!p || p.quality === null || p.quality === undefined) return false
+                return filters.quality.includes(p.quality)
+            })
+        }
+        
+        return result
+    } catch (error) {
+        console.error('Filtering error:', error)
+        return points.value || []
     }
-    
-    // Quality filter
-    if (filters.quality && filters.quality.length > 0) {
-        result = result.filter(p => filters.quality.includes(p.quality))
-    }
-    
-    return result
 })
 
 const toggleSelectAll = (val) => {
@@ -2061,10 +2007,10 @@ const onSelectFormulaTemplate = (type) => {
 }
 
 const registerTypes = [
-    { title: 'Coils (outputs) - 01', value: 'coil' },
-    { title: 'Discrete Inputs - 02', value: 'discrete' },
-    { title: 'Input Registers - 04', value: 'input' },
-    { title: 'Holding Registers - 03', value: 'holding' }
+    { label: 'COIL (输出线圈)', value: 'coil' },
+    { label: 'DISCRETE_INPUT (离散输入)', value: 'discrete' },
+    { label: 'INPUT_REGISTER (输入寄存器)', value: 'input' },
+    { label: 'HOLDING_REGISTER (保持寄存器)', value: 'holding' }
 ]
 
 const registerIndexError = ref('')
@@ -2105,6 +2051,39 @@ const validateRegisterOffset = () => {
     }
 }
 
+const getProtocolAddressLabel = () => {
+    switch (channelProtocol.value) {
+        case 's7': return 'S7 地址'
+        case 'ethernet-ip': return 'Tag 名称'
+        case 'mitsubishi-slmp': return '地址'
+        case 'omron-fins': return '地址'
+        case 'dlt645': return '数据标识'
+        default: return '地址'
+    }
+}
+
+const getProtocolAddressPlaceholder = () => {
+    switch (channelProtocol.value) {
+        case 's7': return 'DB1.DBD0'
+        case 'ethernet-ip': return 'Program:Main.MyTag'
+        case 'mitsubishi-slmp': return 'D100'
+        case 'omron-fins': return 'CIO1.2'
+        case 'dlt645': return '02-01-01-00'
+        default: return '输入地址'
+    }
+}
+
+const getProtocolAddressTooltip = () => {
+    switch (channelProtocol.value) {
+        case 's7': return '例如: DB1.DBD0, M0.0'
+        case 'ethernet-ip': return '例如: Program:Main.MyTag'
+        case 'mitsubishi-slmp': return '格式: D100, M0, X0, D20.2, D100.16L'
+        case 'omron-fins': return '格式: CIO1.2, D100, W3.4, EM10.100'
+        case 'dlt645': return '格式: XX-XX-XX-XX'
+        default: return ''
+    }
+}
+
 const updateAddress = () => {
     const idx = parseInt(pointDialog.registerIndex) || 0
     const offset = parseInt(pointDialog.registerOffset) || 0
@@ -2130,6 +2109,18 @@ const updateAddress = () => {
     
     registerIndexError.value = ''
     pointDialog.form.address = address.toString()
+    
+    // Auto set function code based on register type
+    const functionCodeMap = {
+        'coil': 1,          // COIL (输出线圈)
+        'discrete': 2,      // DISCRETE_INPUT (离散输入)
+        'input': 4,         // INPUT_REGISTER (输入寄存器)
+        'holding': 3        // HOLDING_REGISTER (保持寄存器)
+    }
+    
+    if (functionCodeMap[pointDialog.registerType]) {
+        pointDialog.functionCode = functionCodeMap[pointDialog.registerType]
+    }
 }
 
 const updateBACnetAddress = () => {
@@ -2422,7 +2413,10 @@ const onCloneChannelChange = async (cid) => {
         if (!cid) return
         const devs = await request.get(`/api/channels/${cid}/devices`, { timeout: 10000, silent: true })
         const list = devs || []
-        cloneDialog.devices = list.filter(d => !(cid === channelId.value && d.id === deviceId.value))
+        cloneDialog.devices = list.filter(d => !(cid === channelId.value && d.id === deviceId.value)).map(d => ({
+            label: d.name || d.id || 'Unknown Device',
+            value: d.id
+        }))
     } catch (e) {
     } finally {
         cloneDialog.loading = false

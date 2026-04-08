@@ -8,28 +8,6 @@ id: LAPTOP-5E3D21EG
 interval: 10s
 name: LAPTOP-5E3D21EG
 points:
-    - address: ns=3;i=1011
-      datatype: float32
-      group: ""
-      id: ns=3;i=1011
-      name: ns=3;i=1011
-      offset: 0
-      readwrite: R
-      report_mode: ""
-      scale: 1
-      threshold: null
-      unit: ""
-    - address: ns=3;i=1012
-      datatype: float32
-      group: ""
-      id: ns=3;i=1012
-      name: ns=3;i=1012
-      offset: 0
-      readwrite: R
-      report_mode: ""
-      scale: 1
-      threshold: null
-      unit: ""
     - address: ns=3;i=1001
       datatype: float32
       group: ""
@@ -90,6 +68,17 @@ points:
       group: ""
       id: ns=3;i=1005
       name: Square
+      offset: 0
+      readwrite: R
+      report_mode: ""
+      scale: 1
+      threshold: null
+      unit: ""
+    - address: ns=5;s=TimeString
+      datatype: float32
+      group: ""
+      id: ns=5;s=TimeString
+      name: TimeString
       offset: 0
       readwrite: R
       report_mode: ""

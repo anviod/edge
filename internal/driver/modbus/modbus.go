@@ -25,6 +25,11 @@ type ModbusDriver struct {
 
 	// Kept for direct access if needed, though mostly delegating
 	slaveID uint8
+
+	// Connection metrics
+	connectionStartTime time.Time
+	reconnectCount      int64
+	lastDisconnectTime  time.Time
 }
 
 func NewModbusDriver() driver.Driver {
@@ -193,6 +198,10 @@ func (d *ModbusDriver) Init(config model.DriverConfig) error {
 }
 
 func (d *ModbusDriver) Connect(ctx context.Context) error {
+	// Record connection start time
+	d.connectionStartTime = time.Now()
+	d.reconnectCount++
+
 	err := d.transport.Connect(ctx)
 	if err != nil {
 		d.state.OnFailure()
@@ -203,6 +212,9 @@ func (d *ModbusDriver) Connect(ctx context.Context) error {
 }
 
 func (d *ModbusDriver) Disconnect() error {
+	// Record disconnect time
+	d.lastDisconnectTime = time.Now()
+
 	return d.transport.Disconnect()
 }
 
@@ -352,6 +364,105 @@ func (d *ModbusDriver) GetConnectionMetrics() (connectionSeconds int64, reconnec
 		return d.transport.GetConnectionMetrics()
 	}
 	return 0, 0, "", "", time.Time{}
+}
+
+// GetMetrics 返回Modbus驱动的详细指标
+func (d *ModbusDriver) GetMetrics() model.ChannelMetrics {
+	// 获取基础连接指标
+	connSec, reconCount, localAddr, remoteAddr, lastDisc := d.GetConnectionMetrics()
+
+	// 获取调度器统计信息
+	totalRequests := int64(0)
+	successCount := int64(0)
+	failureCount := int64(0)
+
+	if d.scheduler != nil {
+		d.scheduler.mu.Lock()
+		totalRequests = d.scheduler.txTotal
+		successCount = d.scheduler.rxTotal
+		failureCount = d.scheduler.errorsTotal
+		d.scheduler.mu.Unlock()
+	}
+
+	// 计算成功率
+	successRate := 0.0
+	if totalRequests > 0 {
+		successRate = float64(successCount) / float64(totalRequests)
+	}
+
+	// 构建指标
+	metrics := model.ChannelMetrics{
+		QualityScore:       d.calculateQualityScore(),
+		Protocol:           "Modbus",
+		SuccessRate:        successRate,
+		TimeoutCount:       failureCount, // Modbus的错误主要来自超时
+		CrcError:           0,            // Modbus有CRC但这里不单独统计
+		CrcErrorRate:       0.0,
+		RetryRate:          0.0, // 可以后续添加重试统计
+		ExceptionCode:      0,
+		AvgRtt:             0, // 可以后续添加RTT统计
+		MaxRtt:             0,
+		MinRtt:             0,
+		TotalRequests:      totalRequests,
+		SuccessCount:       successCount,
+		FailureCount:       failureCount,
+		PacketLoss:         1.0 - successRate,
+		ReconnectCount:     reconCount,
+		ConnectionSeconds:  connSec,
+		LocalAddr:          localAddr,
+		RemoteAddr:         remoteAddr,
+		LastDisconnectTime: lastDisc,
+		Timestamp:          time.Now(),
+	}
+
+	return metrics
+}
+
+// calculateQualityScore 计算Modbus质量评分
+func (d *ModbusDriver) calculateQualityScore() int {
+	if d.transport == nil || !d.transport.IsConnected() {
+		return 0 // 未连接
+	}
+
+	// 基础分数70分
+	score := 70
+
+	// 根据重连次数降低分数
+	if d.reconnectCount > 10 {
+		score -= 20
+	} else if d.reconnectCount > 5 {
+		score -= 10
+	} else if d.reconnectCount > 0 {
+		score -= 5
+	}
+
+	// 根据成功率调整分数
+	if d.scheduler != nil {
+		d.scheduler.mu.Lock()
+		total := d.scheduler.txTotal
+		success := d.scheduler.rxTotal
+		d.scheduler.mu.Unlock()
+
+		if total > 0 {
+			rate := float64(success) / float64(total)
+			if rate > 0.95 {
+				score += 20 // 高成功率加分
+			} else if rate > 0.90 {
+				score += 10
+			} else if rate < 0.80 {
+				score -= 10 // 低成功率减分
+			}
+		}
+	}
+
+	// 确保分数在0-100范围内
+	if score < 0 {
+		score = 0
+	} else if score > 100 {
+		score = 100
+	}
+
+	return score
 }
 
 // ReadPointsWithSlaveID reads points from a specific slave ID

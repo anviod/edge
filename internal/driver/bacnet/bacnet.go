@@ -64,7 +64,7 @@ type BACnetDriver struct {
 	config               model.DriverConfig
 	client               Client
 	scheduler            *PointScheduler
-	mu                   sync.Mutex
+	mu                   sync.RWMutex
 	useDataformatDecoder bool
 
 	// Factory for creating clients (injectable for testing)
@@ -81,6 +81,11 @@ type BACnetDriver struct {
 
 	connected     bool
 	lastDiscovery time.Time
+
+	// Connection metrics
+	connectionStartTime time.Time
+	reconnectCount      int64
+	lastDisconnectTime  time.Time
 
 	// History of discovered objects for each device
 	// Map: DeviceID -> Map: ObjectKey(Type:Instance) -> ObjectResult
@@ -183,6 +188,10 @@ func (d *BACnetDriver) Connect(ctx context.Context) error {
 	if d.connected && d.client != nil && d.client.IsRunning() {
 		return nil
 	}
+
+	// Record connection start time
+	d.connectionStartTime = time.Now()
+	d.reconnectCount++
 
 	// Create Client
 	cb := &ClientBuilder{
@@ -318,6 +327,9 @@ func (d *BACnetDriver) Disconnect() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	// Record disconnect time
+	d.lastDisconnectTime = time.Now()
+
 	if d.client != nil {
 		d.client.Close()
 	}
@@ -331,6 +343,7 @@ func (d *BACnetDriver) ReadPoints(ctx context.Context, points []model.Point) (ma
 		return map[string]model.Value{}, nil
 	}
 
+	// Use write lock directly to avoid lock upgrade issues
 	d.mu.Lock()
 	// Resolve Target ID from Point
 	targetID := -1
@@ -814,8 +827,41 @@ func (d *BACnetDriver) SetDeviceConfig(config map[string]any) error {
 }
 
 func (d *BACnetDriver) GetConnectionMetrics() (connectionSeconds int64, reconnectCount int64, localAddr string, remoteAddr string, lastDisconnectTime time.Time) {
-	// Not implemented for BACnet yet
-	return 0, 0, "", "", time.Time{}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	// 计算连接时长
+	connSec := int64(0)
+	if !d.connectionStartTime.IsZero() {
+		// 检查是否有活跃连接（至少有一个设备在线）
+		hasActiveConnection := false
+		for _, ctx := range d.deviceContexts {
+			if ctx.State == DeviceStateOnline {
+				hasActiveConnection = true
+				break
+			}
+		}
+		if hasActiveConnection {
+			connSec = int64(time.Since(d.connectionStartTime).Seconds())
+		}
+	}
+
+	// 获取本地地址信息
+	local := fmt.Sprintf("%s:%d", d.interfaceIP, d.interfacePort)
+
+	// 对于BACnet，远程地址显示为广播或已发现设备数量
+	remote := "广播"
+	activeDeviceCount := 0
+	for _, ctx := range d.deviceContexts {
+		if ctx.State == DeviceStateOnline {
+			activeDeviceCount++
+		}
+	}
+	if activeDeviceCount > 0 {
+		remote = fmt.Sprintf("广播(%d设备在线)", activeDeviceCount)
+	}
+
+	return connSec, d.reconnectCount, local, remote, d.lastDisconnectTime
 }
 
 // Scan performs a device discovery (WhoIs) and optionally reads device details
@@ -1669,4 +1715,122 @@ RespLoop:
 	d.mu.Unlock()
 
 	return finalResults, nil
+}
+
+// GetMetrics 返回BACnet驱动的详细指标
+func (d *BACnetDriver) GetMetrics() model.ChannelMetrics {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	// 获取基础连接指标（内联实现，避免重复加锁）
+	connSec := int64(0)
+	if !d.connectionStartTime.IsZero() {
+		hasActiveConnection := false
+		for _, ctx := range d.deviceContexts {
+			if ctx.State == DeviceStateOnline {
+				hasActiveConnection = true
+				break
+			}
+		}
+		if hasActiveConnection {
+			connSec = int64(time.Since(d.connectionStartTime).Seconds())
+		}
+	}
+
+	local := fmt.Sprintf("%s:%d", d.interfaceIP, d.interfacePort)
+
+	// 计算设备统计
+	onlineDevices := 0
+	totalPoints := 0
+	successfulPoints := 0
+
+	for _, ctx := range d.deviceContexts {
+		if ctx.State == DeviceStateOnline {
+			onlineDevices++
+		}
+		totalPoints += len(ctx.SubscribedPoints)
+		// 简单计算成功点位（这里可以根据实际缓存状态计算）
+		if ctx.LastValues != nil {
+			successfulPoints += len(ctx.LastValues)
+		}
+	}
+
+	// 计算成功率
+	successRate := 0.0
+	if totalPoints > 0 {
+		successRate = float64(successfulPoints) / float64(totalPoints)
+	}
+
+	// 快速计算质量评分（不调用单独方法以避免性能问题）
+	qualityScore := d.calculateQualityScoreLocked()
+
+	// 构建指标
+	metrics := model.ChannelMetrics{
+		QualityScore:       qualityScore,
+		Protocol:           "BACnet",
+		SuccessRate:        successRate,
+		TimeoutCount:       0, // BACnet使用UDP，不适用超时计数
+		CrcError:           0, // BACnet有自己的错误处理
+		CrcErrorRate:       0.0,
+		RetryRate:          0.0,
+		ExceptionCode:      0,
+		AvgRtt:             0, // BACnet响应时间统计可以后续添加
+		MaxRtt:             0,
+		MinRtt:             0,
+		TotalRequests:      int64(totalPoints),
+		SuccessCount:       int64(successfulPoints),
+		FailureCount:       int64(totalPoints - successfulPoints),
+		PacketLoss:         1.0 - successRate,
+		ReconnectCount:     d.reconnectCount,
+		ConnectionSeconds:  connSec,
+		LocalAddr:          local,
+		RemoteAddr:         "",
+		LastDisconnectTime: d.lastDisconnectTime,
+		Timestamp:          time.Now(),
+	}
+
+	return metrics
+}
+
+// calculateQualityScoreLocked 计算BACnet质量评分（假设已持有RLock）
+func (d *BACnetDriver) calculateQualityScoreLocked() int {
+	if len(d.deviceContexts) == 0 {
+		return 100 // 没有设备时认为是完美的
+	}
+
+	totalScore := 0
+	deviceCount := 0
+
+	for _, ctx := range d.deviceContexts {
+		score := 100
+
+		// 根据设备状态调整评分
+		switch ctx.State {
+		case DeviceStateOffline:
+			score = 0
+		case DeviceStateIsolated:
+			score = 20
+		case DeviceStateUnstable:
+			score = 60
+		case DeviceStateOnline:
+			score = 100
+		}
+
+		// 根据连续失败次数调整
+		if ctx.ConsecutiveFailures > 0 {
+			score -= ctx.ConsecutiveFailures * 10
+			if score < 0 {
+				score = 0
+			}
+		}
+
+		totalScore += score
+		deviceCount++
+	}
+
+	if deviceCount == 0 {
+		return 100
+	}
+
+	return totalScore / deviceCount
 }

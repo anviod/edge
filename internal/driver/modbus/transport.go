@@ -388,8 +388,13 @@ func (t *ModbusTransport) Connect(ctx context.Context) error {
 
 				// 获取并记录连接信息
 				if t.client != nil {
-					// 记录远程地址
+					// 记录远程地址（去掉协议前缀）
 					t.remoteAddr = url
+					if strings.HasPrefix(t.remoteAddr, "tcp://") {
+						t.remoteAddr = strings.TrimPrefix(t.remoteAddr, "tcp://")
+					} else if strings.HasPrefix(t.remoteAddr, "rtuovertcp://") {
+						t.remoteAddr = strings.TrimPrefix(t.remoteAddr, "rtuovertcp://")
+					}
 
 					// 获取并记录真实的本地地址（包含端口）
 					t.localAddr = getLocalAddr(t.client)

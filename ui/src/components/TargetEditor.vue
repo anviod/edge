@@ -96,7 +96,7 @@ const onChannelChange = async () => {
     pointList.value = []
     if (localTarget.value.channel_id) {
         const data = await request.get(`/api/channels/${localTarget.value.channel_id}/devices`)
-        deviceList.value = data || []
+        deviceList.value = Array.isArray(data) ? data : []
     }
 }
 
@@ -114,7 +114,7 @@ const onDeviceChange = () => {
 const loadDevices = async () => {
     if (localTarget.value.channel_id && deviceList.value.length === 0) {
         const data = await request.get(`/api/channels/${localTarget.value.channel_id}/devices`)
-        deviceList.value = data || []
+        deviceList.value = Array.isArray(data) ? data : []
         if (localTarget.value.device_id) {
             onDeviceChange()
         }

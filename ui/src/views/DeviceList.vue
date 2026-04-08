@@ -267,45 +267,7 @@
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="historyDialog" title="历史数据" width="900px" @cancel="historyDialog = false">
-      <template #footer>
-        <a-space>
-          <a-button @click="historyDialog = false">关闭</a-button>
-          <a-button type="primary" :loading="historyLoading" @click="fetchHistory">查询</a-button>
-          <a-button @click="downloadHistoryCSV" :disabled="historyData.length === 0">导出CSV</a-button>
-        </a-space>
-      </template>
-      
-      <a-space direction="vertical" :size="16" fill>
-        <a-row :gutter="16">
-          <a-col :span="6">
-            <a-select v-model="historyMode" :options="[
-              { label: '最近记录', value: 'limit' },
-              { label: '时间范围', value: 'range' }
-            ]" placeholder="查询模式" />
-          </a-col>
-          <a-col :span="6" v-if="historyMode === 'limit'">
-            <a-input-number v-model="historyLimit" :min="1" placeholder="记录数量" />
-          </a-col>
-          <a-col :span="12" v-if="historyMode === 'range'">
-            <a-range-picker v-model="historyDateRange" show-time />
-          </a-col>
-        </a-row>
-        
-        <a-table 
-          :columns="historyHeaders" 
-          :data="historyData" 
-          :loading="historyLoading" 
-          :pagination="false" 
-          size="small"
-          :bordered="{ cell: true }"
-        >
-          <template #columns>
-            <a-table-column v-for="header in historyHeaders" :key="header.key" :title="header.title" :data-index="header.key" />
-          </template>
-        </a-table>
-      </a-space>
-    </a-modal>
+    <HistoryModal v-model:visible="historyModalVisible" :device="historyDevice" />
 
     <a-modal v-model:visible="deleteDialog" title="确认删除" @ok="executeDelete" @cancel="deleteDialog = false">
       <p>{{ itemToDelete ? '确定要删除该设备吗？' : `确定要删除选中的 ${selected.length} 个设备吗？` }}此操作无法撤销。</p>
@@ -400,6 +362,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import request from '@/utils/request'
 import { base64ToUint8Array, uint8ArrayToHex, detectFileType, downloadBytes } from '@/utils/decode'
+import HistoryModal from '@/components/HistoryModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -490,6 +453,27 @@ const getQualityLabel = (score) => {
   if (score >= 80) return 'Good'
   if (score >= 60) return 'Average'
   return 'Bad'
+}
+
+const formatFriendlyTime = (ts) => {
+  if (!ts && ts !== 0) return '-'
+  const date = new Date(Number(ts) * 1000)
+  if (Number.isNaN(date.getTime())) return '-'
+
+  const diff = Date.now() - date.getTime()
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (seconds < 30) return '刚刚'
+  if (seconds < 60) return `${seconds}秒前`
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+
+  const fmt = (n) => n.toString().padStart(2, '0')
+  return `${date.getFullYear()}-${fmt(date.getMonth() + 1)}-${fmt(date.getDate())} ${fmt(date.getHours())}:${fmt(date.getMinutes())}:${fmt(date.getSeconds())}`
 }
 
 const getConfigValue = (device, field) => {
@@ -709,100 +693,12 @@ const executeDelete = async () => {
   }
 }
 
-const historyDialog = ref(false)
+const historyModalVisible = ref(false)
 const historyDevice = ref(null)
-const historyLoading = ref(false)
-const historyData = ref([])
-const historyHeaders = ref([])
-const historyDateRange = ref([])
-const historyLimit = ref(100)
-const historyMode = ref('limit')
 
 const openHistoryDialog = (device) => {
   historyDevice.value = device
-  historyDialog.value = true
-  historyData.value = []
-  historyHeaders.value = []
-  historyMode.value = 'limit'
-  historyLimit.value = 100
-  
-  const end = new Date()
-  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
-  
-  const toLocalISO = (d) => {
-    const offset = d.getTimezoneOffset() * 60000
-    return new Date(d.getTime() - offset).toISOString().slice(0, 16)
-  }
-  
-  historyDateRange.value = [toLocalISO(start), toLocalISO(end)]
-  fetchHistory()
-}
-
-const fetchHistory = async () => {
-  historyLoading.value = true
-  historyData.value = []
-  historyHeaders.value = []
-  try {
-    let url = `/api/devices/${historyDevice.value.id}/history`
-    if (historyMode.value === 'range') {
-      const start = historyDateRange.value[0] + ':00'
-      const end = historyDateRange.value[1] + ':00'
-      url += `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-    } else {
-      url += `?limit=${historyLimit.value}`
-    }
-    
-    const res = await request.get(url, { timeout: 60000 })
-    historyData.value = res || []
-    
-    if (historyData.value.length > 0) {
-      const keys = new Set()
-      historyData.value.forEach(row => {
-        if (row.data) {
-          Object.keys(row.data).forEach(k => keys.add(k))
-        }
-      })
-      
-      const headers = [
-        { title: '时间', key: 'ts', width: 180 },
-        ...Array.from(keys).sort().map(k => ({ title: k, key: `data.${k}` }))
-      ]
-      historyHeaders.value = headers
-    }
-  } catch (e) {
-    Message.error('获取历史数据失败: ' + e.message)
-  } finally {
-    historyLoading.value = false
-  }
-}
-
-const downloadHistoryCSV = () => {
-  if (historyData.value.length === 0) {
-    Message.warning('无数据可导出')
-    return
-  }
-  
-  const headers = historyHeaders.value.map(h => h.title)
-  const keys = historyHeaders.value.map(h => h.key)
-  
-  const rows = historyData.value.map(row => {
-    return keys.map(key => {
-      if (key === 'ts') return new Date(row.ts * 1000).toLocaleString()
-      const prop = key.split('.')[1]
-      return row.data ? (row.data[prop] ?? '') : ''
-    })
-  })
-  
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(r => r.join(','))
-  ].join('\n')
-  
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `${historyDevice.value.name}_history_${new Date().toISOString().slice(0,10)}.csv`
-  link.click()
+  historyModalVisible.value = true
 }
 
 const goToPoints = (device) => {

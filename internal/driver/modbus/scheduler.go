@@ -671,40 +671,57 @@ func (s *PointScheduler) readGroup(ctx context.Context, group PointGroup) (map[s
 		}
 
 		// Fallback: try per-point reads to avoid whole-group failure due to illegal addresses
+		// But limit to avoid excessive network requests
+		fallbackTimeout := time.NewTimer(5 * time.Second)
+		defer fallbackTimeout.Stop()
+		
 		for _, point := range group.Points {
-			_, offset, _ := s.decoder.ParseAddress(point.Address)
-			regCount := s.decoder.GetRegisterCount(point.DataType)
-
-			b, perr := s.transport.ReadRegisters(ctx, group.RegType.ShortString(), offset, regCount)
-			if perr != nil || len(b) < int(regCount*2) {
-				// Mark as failed with error value; caller will convert to Bad quality
-				if perr != nil {
-					result[point.ID] = perr
-				} else {
-					result[point.ID] = fmt.Errorf("read length mismatch")
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-fallbackTimeout.C:
+				log.Printf("Fallback read timeout, stopping further reads")
+				for _, p := range group.Points {
+					if _, exists := result[p.ID]; !exists {
+						result[p.ID] = fmt.Errorf("fallback read timeout")
+					}
 				}
-				// record debug info if transport supports metrics recorder
+				return result, nil
+			default:
+				_, offset, _ := s.decoder.ParseAddress(point.Address)
+				regCount := s.decoder.GetRegisterCount(point.DataType)
+
+				b, perr := s.transport.ReadRegisters(ctx, group.RegType.ShortString(), offset, regCount)
+				if perr != nil || len(b) < int(regCount*2) {
+					// Mark as failed with error value; caller will convert to Bad quality
+					if perr != nil {
+						result[point.ID] = perr
+					} else {
+						result[point.ID] = fmt.Errorf("read length mismatch")
+					}
+					// record debug info if transport supports metrics recorder
+					if mt, ok := s.transport.(*ModbusTransport); ok && mt.metricsRecorder != nil {
+						mt.metricsRecorder.RecordPointDebug(mt.channelID, point.ID, nil, nil, "Bad")
+					}
+					continue
+				}
+
+				val, quality, derr := s.decoder.Decode(point, b)
+				if derr != nil {
+					log.Printf("Error decoding point %s in fallback: %v", point.ID, derr)
+					result[point.ID] = derr
+					if mt, ok := s.transport.(*ModbusTransport); ok && mt.metricsRecorder != nil {
+						mt.metricsRecorder.RecordPointDebug(mt.channelID, point.ID, append([]byte(nil), b...), nil, "Bad")
+					}
+					continue
+				}
+
 				if mt, ok := s.transport.(*ModbusTransport); ok && mt.metricsRecorder != nil {
-					mt.metricsRecorder.RecordPointDebug(mt.channelID, point.ID, nil, nil, "Bad")
+					mt.metricsRecorder.RecordPointDebug(mt.channelID, point.ID, append([]byte(nil), b...), val, quality)
 				}
-				continue
-			}
 
-			val, quality, derr := s.decoder.Decode(point, b)
-			if derr != nil {
-				log.Printf("Error decoding point %s in fallback: %v", point.ID, derr)
-				result[point.ID] = derr
-				if mt, ok := s.transport.(*ModbusTransport); ok && mt.metricsRecorder != nil {
-					mt.metricsRecorder.RecordPointDebug(mt.channelID, point.ID, append([]byte(nil), b...), nil, "Bad")
-				}
-				continue
+				result[point.ID] = val
 			}
-
-			if mt, ok := s.transport.(*ModbusTransport); ok && mt.metricsRecorder != nil {
-				mt.metricsRecorder.RecordPointDebug(mt.channelID, point.ID, append([]byte(nil), b...), val, quality)
-			}
-
-			result[point.ID] = val
 		}
 
 		// If we managed to read at least one point, treat as success at group level.

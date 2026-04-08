@@ -377,7 +377,7 @@ const startScan = async () => {
     const res = await request.post(
       `/api/channels/${props.channelId}/devices/${props.deviceId}/scan`,
       payload,
-      { timeout: 60000 }
+      { timeout: 180000 } // 增加到3分钟
     )
 
     if (Array.isArray(res)) {

@@ -1,7 +1,7 @@
 mqtt:
     - id: mqtt-1
-      name: Default MQTT
-      enable: false
+      name: Default MQTT-1
+      enable: true
       broker: tcp://127.0.0.1:1883
       client_id: industrial_gateway_001
       topic: things/{client_id}/up

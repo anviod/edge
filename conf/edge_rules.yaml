@@ -13,14 +13,14 @@
     point_name: ""
   sources:
     - alias: t1
-      channel_id: modbus-tcp-1
+      channel_id: 44amyf4grh5oquzc
       device_id: slave-1
-      point_id: dev1_temp
+      point_id: hr_40000
       point_name: Temperature
     - alias: t2
-      channel_id: modbus-tcp-1
+      channel_id: 44amyf4grh5oquzc
       device_id: slave-2
-      point_id: dev2_temp
+      point_id: hr_40000
       point_name: Temperature
   trigger_logic: ""
   condition: t1 > 100 && t2>300
@@ -30,6 +30,7 @@
       config:
         interval: 30s
         message: TMPW
+        mqtt_id: mqtt-1
         send_strategy: single
         topic: gateway/warning
     - type: device_control

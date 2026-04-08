@@ -43,7 +43,7 @@ func (m *DeviceStorageManager) handleValue(val model.Value) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Update snapshot
+	// Update snapshot regardless of storage strategy
 	if _, ok := m.snapshots[val.DeviceID]; !ok {
 		m.snapshots[val.DeviceID] = make(map[string]any)
 	}

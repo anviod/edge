@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"edge-gateway/internal/model"
 	"time"
 
@@ -42,27 +43,48 @@ func (s *Server) getChannelMetrics(c *fiber.Ctx) error {
 		metrics.RemoteAddr = remoteAddr
 		metrics.LastDisconnectTime = lastDisc
 
-		// 检查是否是 BACnet 驱动，获取详细指标
+		// 检查是否是支持 GetMetrics 的驱动，以超时方式获取详细指标
 		if bacnetDriver, ok := driver.(interface{ GetMetrics() model.ChannelMetrics }); ok {
-			bacnetMetrics := bacnetDriver.GetMetrics()
-			// 覆盖基础指标
-			metrics.QualityScore = bacnetMetrics.QualityScore
-			metrics.Protocol = bacnetMetrics.Protocol
-			metrics.SuccessRate = bacnetMetrics.SuccessRate
-			metrics.TimeoutCount = bacnetMetrics.TimeoutCount
-			metrics.CrcError = bacnetMetrics.CrcError
-			metrics.CrcErrorRate = bacnetMetrics.CrcErrorRate
-			metrics.RetryRate = bacnetMetrics.RetryRate
-			metrics.ExceptionCode = bacnetMetrics.ExceptionCode
-			metrics.AvgRtt = bacnetMetrics.AvgRtt
-			metrics.MaxRtt = bacnetMetrics.MaxRtt
-			metrics.MinRtt = bacnetMetrics.MinRtt
-			metrics.TotalRequests = bacnetMetrics.TotalRequests
-			metrics.SuccessCount = bacnetMetrics.SuccessCount
-			metrics.FailureCount = bacnetMetrics.FailureCount
-			metrics.PacketLoss = bacnetMetrics.PacketLoss
-			metrics.Trend = bacnetMetrics.Trend
-			metrics.RecentErrors = bacnetMetrics.RecentErrors
+			// 使用 goroutine + channel 实现超时控制（避免阻塞）
+			metricsChannel := make(chan model.ChannelMetrics, 1)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						zap.L().Warn("GetMetrics panic", zap.String("channelId", channelID), zap.Any("error", r))
+					}
+				}()
+				bacnetMetrics := bacnetDriver.GetMetrics()
+				metricsChannel <- bacnetMetrics
+			}()
+
+			// 最多等待500ms获取详细指标
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+
+			select {
+			case bacnetMetrics := <-metricsChannel:
+				// 成功获取详细指标，覆盖基础指标
+				metrics.QualityScore = bacnetMetrics.QualityScore
+				metrics.Protocol = bacnetMetrics.Protocol
+				metrics.SuccessRate = bacnetMetrics.SuccessRate
+				metrics.TimeoutCount = bacnetMetrics.TimeoutCount
+				metrics.CrcError = bacnetMetrics.CrcError
+				metrics.CrcErrorRate = bacnetMetrics.CrcErrorRate
+				metrics.RetryRate = bacnetMetrics.RetryRate
+				metrics.ExceptionCode = bacnetMetrics.ExceptionCode
+				metrics.AvgRtt = bacnetMetrics.AvgRtt
+				metrics.MaxRtt = bacnetMetrics.MaxRtt
+				metrics.MinRtt = bacnetMetrics.MinRtt
+				metrics.TotalRequests = bacnetMetrics.TotalRequests
+				metrics.SuccessCount = bacnetMetrics.SuccessCount
+				metrics.FailureCount = bacnetMetrics.FailureCount
+				metrics.PacketLoss = bacnetMetrics.PacketLoss
+				metrics.Trend = bacnetMetrics.Trend
+				metrics.RecentErrors = bacnetMetrics.RecentErrors
+			case <-ctx.Done():
+				// 超时，使用基础指标（已经从GetConnectionMetrics获取）
+				zap.L().Warn("GetMetrics timeout", zap.String("channelId", channelID))
+			}
 		}
 	}
 

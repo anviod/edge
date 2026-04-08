@@ -571,6 +571,110 @@
         <a-button type="primary" @click="smartProbeHelpDialog.show = false">关闭</a-button>
       </div>
     </a-modal>
+
+    <!-- Channel Metrics Modal -->
+    <a-modal
+      v-model:visible="metricsDialog.show"
+      :title="`通道监控指标 - ${metricsDialog.channel?.name || ''}`"
+      :width="800"
+      :footer="false"
+      unmount-on-close
+    >
+      <div v-if="metricsDialog.loading" class="metrics-loading">
+        <a-spin tip="加载监控指标中..." size="large" />
+      </div>
+      <div v-else-if="metricsDialog.error" class="metrics-error">
+        <a-alert type="error" :title="metricsDialog.error" show-icon />
+      </div>
+      <div v-else-if="metricsDialog.metrics" class="metrics-content">
+        <!-- 质量评分 -->
+        <div class="metrics-header">
+          <div class="quality-score-section">
+            <div class="quality-score-circle" :class="getQualityClass(qualityScore)">
+              <div class="quality-score-value">{{ qualityScore }}</div>
+              <div class="quality-score-label">质量评分</div>
+              <div class="quality-score-level">{{ getQualityLabel(qualityScore) }}</div>
+            </div>
+            <div class="quality-info">
+              <div class="info-item">
+                <a-badge :status="getQualityStatus(qualityScore)" :text="`通道状态: ${getQualityLabel(qualityScore)}`" />
+              </div>
+              <div v-if="metricsDialog.metrics.reconnectCount > 0" class="info-item">
+                <a-tag status="warning">重连 {{ metricsDialog.metrics.reconnectCount }} 次</a-tag>
+              </div>
+              <div class="info-item">
+                <span class="info-label">连接时长：</span>
+                <span class="info-value">{{ connectionDuration }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">网络连接：</span>
+                <span class="info-value">
+                  {{ getNetworkConnectionText() }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 核心指标 -->
+        <div class="metrics-core">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">成功率</div>
+              <div class="metric-value" :class="getSuccessRateClass(metricsDialog.metrics?.successRate)">
+                {{ formatPercent(metricsDialog.metrics?.successRate) }}
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">平均 RTT</div>
+              <div class="metric-value">
+                {{ formatDuration(metricsDialog.metrics?.avgRtt) }}
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">丢包率</div>
+              <div class="metric-value" :class="getPacketLossClass(metricsDialog.metrics?.packetLoss)">
+                {{ formatPercent(metricsDialog.metrics?.packetLoss) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 详细指标 -->
+        <div class="metrics-details">
+          <a-collapse v-model="metricsDialog.expandedDetails" class="metrics-collapse">
+            <a-collapse-item name="details" title="详细指标">
+              <a-descriptions :column="2" size="small" bordered>
+                <a-descriptions-item label="CRC错误率">
+                  {{ formatPercent(metricsDialog.metrics?.crcErrorRate) }}
+                </a-descriptions-item>
+                <a-descriptions-item label="重试率">
+                  {{ formatPercent(metricsDialog.metrics?.retryRate) }}
+                </a-descriptions-item>
+                <a-descriptions-item label="总请求数">
+                  {{ metricsDialog.metrics?.totalRequests || 0 }}
+                </a-descriptions-item>
+                <a-descriptions-item label="成功请求数">
+                  {{ metricsDialog.metrics?.successRequests || 0 }}
+                </a-descriptions-item>
+                <a-descriptions-item label="失败请求数">
+                  {{ metricsDialog.metrics?.failedRequests || 0 }}
+                </a-descriptions-item>
+                <a-descriptions-item label="重连次数">
+                  {{ metricsDialog.metrics?.reconnectCount || 0 }}
+                </a-descriptions-item>
+              </a-descriptions>
+            </a-collapse-item>
+          </a-collapse>
+        </div>
+      </div>
+      <div v-else class="metrics-empty">
+        <a-empty description="暂无监控指标数据" />
+      </div>
+      <div class="modal-footer">
+        <a-button type="primary" @click="metricsDialog.show = false">关闭</a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -604,6 +708,15 @@ const dialog = reactive({
 
 const smartProbeHelpDialog = reactive({
   show: false
+})
+
+const metricsDialog = reactive({
+  show: false,
+  loading: false,
+  error: null,
+  channel: null,
+  metrics: null,
+  expandedDetails: ['details']
 })
 
 const protocols = [
@@ -734,9 +847,42 @@ const deleteChannel = async (channel) => {
   }
 }
 
-const openMetricsDialog = (channel) => {
-  // 实现监控指标对话框
-  console.log('Open metrics dialog for channel:', channel)
+const openMetricsDialog = async (channel) => {
+  metricsDialog.channel = channel
+  metricsDialog.error = null
+  
+  // 检查通道是否已有缓存的指标数据
+  if (channel.metrics && Object.keys(channel.metrics).length > 0) {
+    // 直接使用缓存数据，不显示加载状态
+    metricsDialog.metrics = channel.metrics
+    metricsDialog.loading = false
+    metricsDialog.show = true
+  } else {
+    // 需要加载指标数据
+    metricsDialog.loading = true
+    metricsDialog.show = true
+    
+    try {
+      // 设置2秒超时
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('加载超时')), 2000)
+      )
+      
+      const metricsResPromise = request({
+        url: `/api/channels/${channel.id}/metrics`,
+        method: 'get'
+      })
+      
+      const metricsRes = await Promise.race([metricsResPromise, timeoutPromise])
+      console.log('Metrics response:', metricsRes)
+      metricsDialog.metrics = metricsRes
+    } catch (error) {
+      metricsDialog.error = `获取监控指标失败: ${error.message}`
+      console.error('Failed to get channel metrics:', error)
+    } finally {
+      metricsDialog.loading = false
+    }
+  }
 }
 
 const scanChannel = (channel) => {
@@ -767,74 +913,283 @@ const getRuntimeText = (state) => {
   return textMap[state] || '未知'
 }
 
+// 监控指标相关计算属性和函数
+const qualityScore = computed(() => {
+  if (!metricsDialog.metrics) return 0
+  
+  let score = 100
+  const m = metricsDialog.metrics
+  
+  if (m.successRate !== undefined)
+    score -= (1 - m.successRate) * 40
+  
+  if (m.crcErrorRate !== undefined)
+    score -= m.crcErrorRate * 20
+  
+  if (m.retryRate !== undefined)
+    score -= m.retryRate * 20
+  
+  if (m.avgRtt > 100)
+    score -= Math.min(10, (m.avgRtt - 100) / 50)
+  
+  return Math.max(0, Math.round(score))
+})
+
+const connectionDuration = computed(() => {
+  if (!metricsDialog.metrics) return '暂无连接信息'
+  const seconds = metricsDialog.metrics.connectionSeconds || 0
+  if (seconds === 0) return '已连接 0s（刚建立连接）'
+  if (seconds < 60) return `已连接 ${seconds}s`
+  if (seconds < 3600) return `已连接 ${Math.floor(seconds / 60)}m`
+  return `已连接 ${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
+})
+
+// 解析网络地址信息
+const networkInfo = computed(() => {
+  if (!metricsDialog.metrics) {
+    return { localIp: '-', localPort: '-', remoteIp: '-', remotePort: '-' }
+  }
+  
+  // 优先使用分开的字段
+  let localIp = metricsDialog.metrics.localIp || metricsDialog.metrics.local_ip
+  let localPort = metricsDialog.metrics.localPort || metricsDialog.metrics.local_port
+  let remoteIp = metricsDialog.metrics.remoteIp || metricsDialog.metrics.remote_ip
+  let remotePort = metricsDialog.metrics.remotePort || metricsDialog.metrics.remote_port
+  
+  // 辅助函数：解析地址字符串（处理IP:Port格式）
+  const parseAddressString = (addrStr) => {
+    if (!addrStr) return { ip: '-', port: '-' }
+    
+    // 去掉协议前缀
+    let addr = addrStr
+    if (addr.includes('://')) {
+      addr = addr.split('://')[1] || addr
+    }
+    
+    // 提取IP和端口
+    // 处理IPv6 [::1]:8080 这种格式
+    if (addr.startsWith('[')) {
+      const bracketIdx = addr.indexOf(']')
+      if (bracketIdx > 0) {
+        const ip = addr.substring(1, bracketIdx)
+        const rest = addr.substring(bracketIdx + 1)
+        if (rest.startsWith(':')) {
+          return { ip, port: rest.substring(1).split('/')[0] }
+        }
+        return { ip, port: '-' }
+      }
+    }
+    
+    // 处理普通IPv4格式 IP:Port 或 包含路径的格式 IP:Port/Path
+    const colonIdx = addr.lastIndexOf(':')
+    if (colonIdx > 0) {
+      const ip = addr.substring(0, colonIdx)
+      let port = addr.substring(colonIdx + 1)
+      
+      // 处理包含路径的情况
+      const slashIdx = port.indexOf('/')
+      if (slashIdx > 0) {
+        port = port.substring(0, slashIdx)
+      }
+      
+      return { ip, port }
+    }
+    
+    // 如果找不到冒号，整个字符串作为IP
+    return { ip: addr, port: '-' }
+  }
+  
+  // 如果没有分开的字段，尝试解析 localAddr 和 remoteAddr
+  if (!localIp && metricsDialog.metrics.localAddr) {
+    const parsed = parseAddressString(metricsDialog.metrics.localAddr)
+    localIp = parsed.ip
+    localPort = parsed.port
+  }
+  
+  if (!remoteIp && metricsDialog.metrics.remoteAddr) {
+    const parsed = parseAddressString(metricsDialog.metrics.remoteAddr)
+    remoteIp = parsed.ip
+    remotePort = parsed.port
+  }
+  
+  return {
+    localIp: localIp || '-',
+    localPort: localPort || '-',
+    remoteIp: remoteIp || '-',
+    remotePort: remotePort || '-'
+  }
+})
+
+const getQualityLabel = (score) => {
+  if (score >= 90) return '优秀'
+  if (score >= 75) return '良好'
+  if (score >= 60) return '一般'
+  return '较差'
+}
+
+const getQualityClass = (score) => {
+  if (score >= 90) return 'quality-excellent'
+  if (score >= 75) return 'quality-good'
+  if (score >= 60) return 'quality-warning'
+  return 'quality-poor'
+}
+
+const getNetworkConnectionText = () => {
+  if (!metricsDialog.metrics) {
+    return '暂无网络连接信息'
+  }
+  
+  // 获取网络信息，确保没有undefined
+  const info = networkInfo
+  const localIp = info.localIp || '-'
+  const localPort = info.localPort || '-'
+  const remoteIp = info.remoteIp || '-'
+  const remotePort = info.remotePort || '-'
+  
+  const local = `${localIp}:${localPort}`
+  
+  // 检查remoteAddr是否是IP:Port格式
+  const remoteAddr = metricsDialog.metrics.remoteAddr
+  if (remoteAddr && remoteAddr.includes(':')) {
+    const parts = remoteAddr.split(':')
+    if (parts.length >= 2 && !isNaN(parts[1])) {
+      // 是IP:Port格式
+      return `本地 ${local} → 目标 ${remoteIp}:${remotePort}`
+    }
+  }
+  
+  // 不是标准IP:Port格式，直接显示remoteAddr作为描述
+  if (remoteAddr && remoteAddr !== '') {
+    return `本地 ${local} → ${remoteAddr}`
+  }
+  
+  return `本地 ${local} → 目标 -:-`
+}
+
+const getQualityStatus = (score) => {
+  if (score >= 90) return 'success'
+  if (score >= 75) return 'info'
+  if (score >= 60) return 'warning'
+  return 'danger'
+}
+
+const getSuccessRateClass = (rate) => {
+  if (rate >= 0.99) return 'metric-success'
+  if (rate >= 0.95) return 'metric-warning'
+  return 'metric-danger'
+}
+
+const getPacketLossClass = (rate) => {
+  if (rate < 0.01) return 'metric-success'
+  if (rate < 0.05) return 'metric-warning'
+  return 'metric-danger'
+}
+
+const formatPercent = (val) => {
+  if (val === undefined || val === null) return '-'
+  return (val * 100).toFixed(1) + '%'
+}
+
+const formatDuration = (ms) => {
+  if (ms === undefined || ms === null) return '-'
+  if (ms < 1) return '<1ms'
+  if (ms < 1000) return ms.toFixed(2) + 'ms'
+  return (ms / 1000).toFixed(2) + 's'
+}
+
 const fetchChannels = async () => {
   loading.value = true
   try {
     const res = await request({ url: '/api/channels', method: 'get' })
     const rawData = Array.isArray(res) ? res : (res.data || [])
     
-    // 为每个通道获取详细的监控指标
-    const channelsWithMetrics = await Promise.all(
+    // 第一步：快速展示通道列表（不等待指标）
+    const channelsWithoutMetrics = rawData.map((item) => {
+      const count = Array.isArray(item.devices) ? item.devices.length : 0
+      const enableText = item.enable ? '已启用' : '已禁用'
+      const enableColor = item.enable ? 'green' : 'gray'
+      
+      // 初始状态：如果enabled则默认在线，否则离线
+      let runtimeText = '离线'
+      let runtimeArcoStatus = 'normal'
+      
+      if (item.enable) {
+        runtimeText = '运行中'
+        runtimeArcoStatus = 'success'
+      }
+      
+      return {
+        ...item,
+        deviceCount: count,
+        enableText,
+        enableColor,
+        runtimeText,
+        runtimeArcoStatus,
+        metrics: null // 先不加载指标
+      }
+    })
+    
+    channels.value = channelsWithoutMetrics
+    loading.value = false // 立即关闭loading
+    
+    // 第二步：异步加载指标数据
+    Promise.all(
       rawData.map(async (item) => {
-        const count = Array.isArray(item.devices) ? item.devices.length : 0
-        const enableText = item.enable ? '已启用' : '已禁用'
-        const enableColor = item.enable ? 'green' : 'gray'
-        
-        // 获取通道监控指标
-        let metrics = null
         try {
           const metricsRes = await request({
             url: `/api/channels/${item.id}/metrics`,
             method: 'get'
           })
-          metrics = metricsRes
+          return { channelId: item.id, metrics: metricsRes }
         } catch (metricsError) {
           console.warn(`获取通道 ${item.id} 指标失败:`, metricsError)
-        }
-        
-        // 基于监控指标确定运行状态
-        let state = item.runtime?.state || 'offline'
-        let runtimeText = { 'running': '运行中', 'error': '异常', 'offline': '离线' }[state] || '未知'
-        let runtimeArcoStatus = { 'running': 'success', 'error': 'danger', 'offline': 'normal' }[state] || 'normal'
-        
-        // 如果有监控指标，使用更详细的状态
-        if (metrics) {
-          const qualityScore = metrics.qualityScore || 0
-          if (qualityScore >= 90) {
-            state = 'running'
-            runtimeText = '运行中 (优秀)'
-            runtimeArcoStatus = 'success'
-          } else if (qualityScore >= 75) {
-            state = 'running'
-            runtimeText = '运行中 (良好)'
-            runtimeArcoStatus = 'success'
-          } else if (qualityScore >= 60) {
-            state = 'error'
-            runtimeText = '运行中 (一般)'
-            runtimeArcoStatus = 'warning'
-          } else if (qualityScore > 0) {
-            state = 'error'
-            runtimeText = '运行中 (较差)'
-            runtimeArcoStatus = 'danger'
-          }
-        }
-        
-        return {
-          ...item,
-          deviceCount: count,
-          enableText,
-          enableColor,
-          runtimeText,
-          runtimeArcoStatus,
-          metrics
+          return { channelId: item.id, metrics: null }
         }
       })
-    )
-    
-    channels.value = channelsWithMetrics
+    ).then((metricsResults) => {
+      // 更新通道指标
+      metricsResults.forEach((result) => {
+        const channelIndex = channels.value.findIndex(ch => ch.id === result.channelId)
+        if (channelIndex >= 0) {
+          const metrics = result.metrics
+          
+          // 基于监控指标更新状态
+          if (metrics && metrics.qualityScore !== undefined && metrics.qualityScore !== null) {
+            const qualityScore = metrics.qualityScore
+            let runtimeText = '运行中'
+            let runtimeArcoStatus = 'success'
+            
+            if (qualityScore >= 90) {
+              runtimeText = '运行中 (优秀)'
+              runtimeArcoStatus = 'success'
+            } else if (qualityScore >= 75) {
+              runtimeText = '运行中 (良好)'
+              runtimeArcoStatus = 'success'
+            } else if (qualityScore >= 60) {
+              runtimeText = '运行中 (一般)'
+              runtimeArcoStatus = 'warning'
+            } else if (qualityScore > 0) {
+              runtimeText = '运行中 (较差)'
+              runtimeArcoStatus = 'danger'
+            } else {
+              runtimeText = '离线'
+              runtimeArcoStatus = 'normal'
+            }
+            
+            channels.value[channelIndex] = {
+              ...channels.value[channelIndex],
+              metrics,
+              runtimeText,
+              runtimeArcoStatus
+            }
+          }
+        }
+      })
+    }).catch((err) => {
+      console.error('批量加载指标失败:', err)
+    })
   } catch (e) {
     Message.error('加载通道列表失败: ' + e.message)
-  } finally {
     loading.value = false
   }
 }
@@ -1105,7 +1460,235 @@ onMounted(() => {
 
 .help-section ul {
   margin-left: 20px;
-  margin-bottom: 16px;
+}
+
+/* 监控指标对话框样式 */
+.metrics-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.metrics-error {
+  margin: 20px 0;
+}
+
+.metrics-content {
+  padding: 20px 0;
+}
+
+.metrics-header {
+  margin-bottom: 24px;
+}
+
+.quality-score-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.quality-score-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.quality-score-circle::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  z-index: 1;
+}
+
+.quality-score-value {
+  font-size: 32px;
+  font-weight: 700;
+  z-index: 2;
+  position: relative;
+}
+
+.quality-score-label {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+  z-index: 2;
+  position: relative;
+}
+
+.quality-score-level {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+  z-index: 2;
+  position: relative;
+}
+
+.quality-excellent {
+  border: 3px solid var(--arco-success-6, #52c41a);
+}
+
+.quality-excellent .quality-score-value,
+.quality-excellent .quality-score-level {
+  color: var(--arco-success-6, #52c41a);
+}
+
+.quality-good {
+  border: 3px solid var(--arco-info-6, #1890ff);
+}
+
+.quality-good .quality-score-value,
+.quality-good .quality-score-level {
+  color: var(--arco-info-6, #1890ff);
+}
+
+.quality-warning {
+  border: 3px solid var(--arco-warning-6, #faad14);
+}
+
+.quality-warning .quality-score-value,
+.quality-warning .quality-score-level {
+  color: var(--arco-warning-6, #faad14);
+}
+
+.quality-poor {
+  border: 3px solid var(--arco-danger-6, #ff4d4f);
+}
+
+.quality-poor .quality-score-value,
+.quality-poor .quality-score-level {
+  color: var(--arco-danger-6, #ff4d4f);
+}
+
+.quality-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-label {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.info-value {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.metrics-core {
+  margin-bottom: 24px;
+}
+
+.metrics-grid {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.metric-card {
+  flex: 1;
+  min-width: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.metric-label {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.metric-success {
+  color: var(--arco-success-6, #52c41a);
+}
+
+.metric-warning {
+  color: var(--arco-warning-6, #faad14);
+}
+
+.metric-danger {
+  color: var(--arco-danger-6, #ff4d4f);
+}
+
+.metrics-details {
+  margin-top: 24px;
+}
+
+.metrics-collapse :deep(.arco-collapse-item-content) {
+  padding: 16px;
+}
+
+.metrics-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+/* 暗黑主题适配 */
+.dark-theme .metric-card {
+  background: #1e293b;
+  border-color: #334155;
+  flex: 1;
+  min-width: 0;
+}
+
+.dark-theme .metric-label {
+  color: #94a3b8;
+}
+
+.dark-theme .metric-value {
+  color: #f8fafc;
+}
+
+.dark-theme .info-label {
+  color: #94a3b8;
+}
+
+.dark-theme .info-value {
+  color: #f8fafc;
+}
+
+.dark-theme .quality-score-circle {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.dark-theme .quality-score-circle::before {
+  background: rgba(255,255,255,0.02);
 }
 
 .help-section li {

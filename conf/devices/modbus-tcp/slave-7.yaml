@@ -1,0 +1,78 @@
+id: slave-7
+name: slave-7
+enable: true
+interval: 10s
+config:
+    slave_id: 7
+    start_address: 0
+storage:
+    enable: false
+    strategy: interval
+    interval: 1
+    max_records: 1000
+points:
+    - id: hr_1
+      name: HR 1
+      register_type: Holding Registers
+      function_code: 0
+      address: "1"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_2
+      name: HR 2
+      register_type: Holding Registers
+      function_code: 0
+      address: "2"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_3
+      name: HR 3
+      register_type: Holding Registers
+      function_code: 0
+      address: "3"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_4
+      name: HR 4
+      register_type: Holding Registers
+      function_code: 0
+      address: "4"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null
+    - id: hr_5
+      name: HR 5
+      register_type: Holding Registers
+      function_code: 0
+      address: "5"
+      datatype: int16
+      scale: 1
+      offset: 0
+      unit: ""
+      readwrite: RW
+      group: ""
+      report_mode: ""
+      threshold: null

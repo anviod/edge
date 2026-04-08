@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"edge-gateway/internal/core"
 	"edge-gateway/internal/model"
 	"edge-gateway/internal/pkg/logger"
@@ -734,7 +735,38 @@ func (s *Server) getDevicePoints(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "device not found in any channel"})
 	}
 
-	points, err := s.cm.GetDevicePoints(channelId, deviceId)
+	// 设置API请求超时，避免长时间阻塞
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	// 使用带超时的上下文获取点位数据
+	var points []model.PointData
+	var err error
+
+	// 创建一个通道来接收结果
+	resultCh := make(chan struct {
+		points []model.PointData
+		err    error
+	}, 1)
+
+	// 在goroutine中执行获取操作
+	go func() {
+		p, e := s.cm.GetDevicePoints(channelId, deviceId)
+		resultCh <- struct {
+			points []model.PointData
+			err    error
+		}{p, e}
+	}()
+
+	// 等待结果或超时
+	select {
+	case res := <-resultCh:
+		points = res.points
+		err = res.err
+	case <-ctx.Done():
+		return c.Status(504).JSON(fiber.Map{"error": "request timeout: device communication took too long"})
+	}
+
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 	}
