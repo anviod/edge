@@ -176,6 +176,7 @@ func (c *CommunicationManageTemplate) ShouldCollect(node *DeviceNodeTemplate) bo
 - `false`: 跳过采集（通常在退避期间）
 
 **决策规则:**
+
 | 设备状态 | 是否允许采集 |
 |---------|-----------|
 | Online | ✓ 是 |
