@@ -4,6 +4,11 @@ title: EdgeX 项目文档
 description: EdgeX 项目的完整文档
 ---
 
+<link rel="stylesheet" href="/assets/style.css">
+<script src="/assets/script.js"></script>
+
+<div class="container">
+
 # EdgeX 项目文档
 
 欢迎来到 EdgeX 项目的文档网站！这里包含了 EdgeX 项目的所有相关文档，包括 API 文档、用户手册、架构设计等。
@@ -136,3 +141,5 @@ description: EdgeX 项目的完整文档
 ## 联系我们
 
 如有任何问题或建议，请通过 GitHub Issues 与我们联系。
+
+</div>
