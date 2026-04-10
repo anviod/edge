@@ -6,6 +6,8 @@ description: EdgeX 项目文档网站
 remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-remote-theme  # 添加远程主题支持
+  - jekyll-seo-tag
+  - jekyll-sitemap
 
 # 导航配置
 nav:
@@ -20,3 +22,9 @@ nav:
 
 # 页面配置
 permalink: /:path/:basename.html
+
+# 排除文件
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
