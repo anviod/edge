@@ -131,6 +131,11 @@
 
       <a-tab-pane key="subscription">
         <template #title><icon-scan /> 数据订阅</template>
+        <div class="table-header">
+          <a-button type="primary" size="small" @click="autoFillDevices">
+            <template #icon><icon-check /></template>一键填充所有设备
+          </a-button>
+        </div>
         <div class="table-container">
           <a-table 
             :columns="deviceColumns" 
@@ -140,8 +145,22 @@
             :pagination="false"
             class="industrial-table-inline"
           >
+            <template #state="{ record }">
+              <a-tag v-if="record.state === 0" color="green" size="small" class="proto-tag-mini">在线</a-tag>
+              <a-tag v-else-if="record.state === 1" color="orangered" size="small" class="proto-tag-mini">不稳定</a-tag>
+              <a-tag v-else color="red" size="small" class="proto-tag-mini">离线</a-tag>
+            </template>
             <template #enable="{ record }">
               <a-switch v-model="record._enable" size="small" @change="updateDeviceEnable(record)" />
+            </template>
+            <template #strategy="{ record }">
+              <a-select v-model="record._strategy" size="small" :disabled="!record._enable" @change="updateDeviceStrategy(record)" class="mono-text">
+                <a-option value="periodic">周期上报</a-option>
+                <a-option value="change">变化上报</a-option>
+              </a-select>
+            </template>
+            <template #interval="{ record }">
+              <a-input v-if="record._strategy === 'periodic'" v-model="record._interval" size="small" :disabled="!record._enable" class="mono-text" @change="updateDeviceInterval(record)" />
             </template>
           </a-table>
         </div>
@@ -160,38 +179,39 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { IconSettings, IconCloud, IconLock, IconScan, IconPlus } from '@arco-design/web-vue/es/icon'
+import { ref, computed, watch } from 'vue'
+import { IconSettings, IconCloud, IconLock, IconScan, IconPlus, IconCheck } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 import request from '@/utils/request'
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
+  visible: { type: Boolean, default: false },
   config: { type: Object, default: null },
   allDevices: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['update:modelValue', 'saved'])
+const emit = defineEmits(['update:visible', 'saved'])
 
-const visible = ref(false)
+const visible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
 const loading = ref(false)
 const form = ref({})
 const activeTab = ref('basic')
 
 const deviceColumns = [
   { title: '设备名称', dataIndex: 'name', width: 200 },
-  { title: '通道', dataIndex: 'channelName', width: 150 },
-  { title: '启用上报', slotName: 'enable', width: 80, align: 'center' }
+  { title: '通道', dataIndex: 'channelName', width: 120 },
+  { title: '在线状态', slotName: 'state', width: 80, align: 'center' },
+  { title: '启用', slotName: 'enable', width: 60, align: 'center' },
+  { title: '策略', slotName: 'strategy', width: 120 },
+  { title: '上报周期', slotName: 'interval', width: 100 }
 ]
 
 const deviceTableData = ref([])
 
-watch(() => props.modelValue, (val) => {
-  visible.value = val
-})
-
-watch(visible, (val) => {
-  emit('update:modelValue', val)
+watch(() => props.visible, (val) => {
   if (val) {
     activeTab.value = 'basic'
     if (props.config) {
@@ -222,21 +242,68 @@ watch(visible, (val) => {
       }
     }
     if (!form.value.devices) form.value.devices = {}
-    deviceTableData.value = props.allDevices.map(dev => ({
-      ...dev,
-      _enable: !!form.value.devices[dev.id]
-    }))
+    buildDeviceTable()
   }
 })
 
+const buildDeviceTable = () => {
+  deviceTableData.value = props.allDevices.map(dev => {
+    const current = form.value.devices[dev.id]
+    let _enable = false, _strategy = 'periodic', _interval = '10s'
+    if (current === undefined || current === null) {
+      _enable = false
+    } else if (typeof current === 'boolean') {
+      _enable = current
+    } else if (typeof current === 'object') {
+      _enable = !!current.enable
+      _strategy = current.strategy || 'periodic'
+      _interval = current.interval || '10s'
+    }
+    return { ...dev, _enable, _strategy, _interval }
+  })
+}
+
 const updateDeviceEnable = (record) => {
-  form.value.devices[record.id] = record._enable
+  if (!form.value.devices[record.id]) {
+    form.value.devices[record.id] = { enable: record._enable, strategy: 'periodic', interval: '10s' }
+  } else if (typeof form.value.devices[record.id] === 'boolean') {
+    form.value.devices[record.id] = { enable: record._enable, strategy: 'periodic', interval: '10s' }
+  } else {
+    form.value.devices[record.id].enable = record._enable
+  }
+}
+
+const updateDeviceStrategy = (record) => {
+  if (!form.value.devices[record.id] || typeof form.value.devices[record.id] === 'boolean') {
+    form.value.devices[record.id] = { enable: record._enable, strategy: record._strategy, interval: record._interval }
+  } else {
+    form.value.devices[record.id].strategy = record._strategy
+  }
+}
+
+const updateDeviceInterval = (record) => {
+  if (!form.value.devices[record.id] || typeof form.value.devices[record.id] === 'boolean') {
+    form.value.devices[record.id] = { enable: record._enable, strategy: record._strategy, interval: record._interval }
+  } else {
+    form.value.devices[record.id].interval = record._interval
+  }
+}
+
+const autoFillDevices = () => {
+  deviceTableData.value.forEach(record => {
+    record._enable = true
+    record._strategy = 'periodic'
+    record._interval = '10s'
+    updateDeviceEnable(record)
+  })
+  showMessage('已一键填充所有设备配置', 'success')
 }
 
 const saveSettings = async () => {
   loading.value = true
   try {
-    await request.post('/api/northbound/sparkplugb', form.value)
+    const dataToSave = { ...form.value }
+    await request.post('/api/northbound/sparkplugb', dataToSave)
     showMessage('Sparkplug B 配置保存成功', 'success')
     visible.value = false
     emit('saved')
@@ -294,6 +361,23 @@ const saveSettings = async () => {
 /* 表格融合规范 */
 .table-container {
   border: 1px solid #e5e7eb;
+  overflow-x: auto;
+}
+
+.table-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 12px 0;
+}
+
+.industrial-table-inline {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.industrial-table-inline :deep(.arco-table) {
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .industrial-table-inline :deep(.arco-table-th) {
@@ -301,10 +385,33 @@ const saveSettings = async () => {
   font-weight: bold;
   height: 34px;
   border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 8px;
+}
+
+.industrial-table-inline :deep(.arco-table-th:last-child) {
+  border-right: none;
 }
 
 .industrial-table-inline :deep(.arco-table-td) {
   height: 34px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 8px;
+}
+
+.industrial-table-inline :deep(.arco-table-td:last-child) {
+  border-right: none;
+}
+
+.industrial-table-inline :deep(.arco-table-td:first-child),
+.industrial-table-inline :deep(.arco-table-th:first-child) {
+  text-align: left;
+  padding-left: 12px;
 }
 
 /* 底部操作区 */
@@ -331,3 +438,4 @@ const saveSettings = async () => {
   border-bottom-style: dashed;
 }
 </style>
+

@@ -339,10 +339,10 @@ func (t *ModbusTransport) Connect(ctx context.Context) error {
 		}
 	}
 
-	zap.L().Info("[Modbus] Establishing TCP connection",
-		zap.String("url", url),
-		zap.Duration("timeout", t.timeout),
-	)
+	//zap.L().Info("[Modbus] Establishing TCP connection",
+	//	zap.String("url", url),
+	//	zap.Duration("timeout", t.timeout),
+	//)
 
 	// Exponential backoff attempts for Open
 	var lastErr error

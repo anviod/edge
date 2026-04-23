@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="point-list-container">
         <div class="point-header">
             <div class="header-left">
@@ -3149,7 +3149,7 @@ const normalizeWriteValue = () => {
   text-align: center;
   background-color: #f9fafb;
   border: 1px dashed #e5e7eb;
-  border-radius: 4px;
+  border-radius: 0;
   margin: 20px;
 }
 
@@ -3227,7 +3227,7 @@ const normalizeWriteValue = () => {
   font-family: 'Courier New', Courier, monospace;
   font-size: 10px;
   padding: 0 4px;
-  border-radius: 2px;
+  border-radius: 0;
   margin-right: 8px;
   white-space: nowrap;
 }
@@ -3251,7 +3251,7 @@ const normalizeWriteValue = () => {
 .terminal-info {
   background: #ffffff;
   border: 1px dashed #e5e7eb;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 10px 16px;
   margin-top: 16px;
   display: flex;
@@ -3508,3 +3508,4 @@ const normalizeWriteValue = () => {
   color: #1e293b;
 }
 </style>
+

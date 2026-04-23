@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal v-model:visible="visible" title="修改密码" width="500px">
     <a-form ref="formRef" @submit.prevent="handleSubmit">
       <a-form-item field="oldPassword" label="旧密码" :rules="[{ required: true, message: '请输入旧密码' }]">
@@ -133,3 +133,4 @@ defineExpose({ open })
   line-height: 32px;
 }
 </style>
+

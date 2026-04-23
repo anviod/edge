@@ -3,7 +3,7 @@ package bacnet
 import (
 	"context"
 	"fmt"
-	"log"
+	//"log"
 	"time"
 
 	"edge-gateway/internal/driver/bacnet/btypes"
@@ -48,7 +48,7 @@ func (c *client) ReadPropertyWithTimeout(device btypes.Device, rp btypes.Propert
 		var out btypes.PropertyData
 		_, err = c.Send(device.Addr, npdu, enc.Bytes(), nil)
 		if err != nil {
-			log.Print(err)
+			//log.Print(err)
 			continue
 		}
 

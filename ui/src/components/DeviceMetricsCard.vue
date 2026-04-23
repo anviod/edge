@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <v-card class="glass-card device-metrics-card" :class="{ 'degraded': isDegraded }">
     <v-card-text class="pa-3">
       <!-- 顶部：设备健康度 -->
@@ -322,7 +322,7 @@ const formatDuration = (ms) => {
 
 .metric-box {
   padding: 8px 4px;
-  border-radius: 4px;
+  border-radius: 0;
   transition: all 0.2s;
 }
 
@@ -339,7 +339,7 @@ const formatDuration = (ms) => {
   justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .detail-row:hover {
@@ -350,3 +350,4 @@ const formatDuration = (ms) => {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
+

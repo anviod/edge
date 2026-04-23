@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <v-card variant="outlined" class="mb-4">
     <v-card-title class="d-flex align-center py-2 px-4" @click="toggle">
       <v-icon icon="mdi-help-circle-outline" color="primary" class="mr-2"></v-icon>
@@ -190,3 +190,4 @@ const toggle = () => {
 
 const sanitize = (html) => sanitizeHtml(html)
 </script>
+

@@ -1,0 +1,73 @@
+/* assets/css/globals.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 1. 强制所有交互组件取消 Ring 偏移,改用内边框 */
+  *:focus {
+    outline: none !important;
+  }
+  
+  .focus-visible\:ring-2,
+  *:focus-visible {
+    --tw-ring-offset-width: 0px !important;
+    --tw-ring-width: 0px !important;
+    --tw-ring-offset-color: transparent !important;
+    --tw-ring-color: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  /* 2. 按钮点击无阴影 */
+  button:focus,
+  button:focus-visible {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  
+  /* 3. 输入框 Focus 使用边框色替代 Ring */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #0EA5E9 !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  
+  /* 4. 工业级表格滚动条 */
+  .scrollbar-industrial {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+  }
+  
+  .scrollbar-industrial::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-industrial::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-industrial::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 0px;
+  }
+  
+  .scrollbar-industrial::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+  }
+}
+
+@layer utilities {
+  /* 5. 强制无圆角覆盖 */
+  .rounded-none-force {
+    border-radius: 0px !important;
+  }
+  
+  /* 6. 强制无阴影覆盖 */
+  .shadow-none-force {
+    box-shadow: none !important;
+  }
+}

@@ -38,3 +38,14 @@ func (s *Server) deleteHTTPConfig(c *fiber.Ctx) error {
 	}
 	return c.SendStatus(200)
 }
+
+func (s *Server) deleteMQTTConfig(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+	id := c.Params("id")
+	if err := s.nbm.DeleteMQTTConfig(id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.SendStatus(200)
+}

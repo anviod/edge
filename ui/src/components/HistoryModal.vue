@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal
     v-model:visible="historyDialog"
     title="历史数据"
@@ -420,7 +420,7 @@ const downloadHistoryCSV = () => {
   background: rgba(0, 0, 0, 0.8);
   color: white;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 12px;
   white-space: normal;
   max-width: 300px;
@@ -433,3 +433,4 @@ const downloadHistoryCSV = () => {
   border-radius: 0;
 }
 </style>
+

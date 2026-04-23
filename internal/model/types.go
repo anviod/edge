@@ -291,6 +291,8 @@ type NorthboundConfig struct {
 	HTTP       []HTTPConfig       `json:"http" yaml:"http"`
 	OPCUA      []OPCUAConfig      `json:"opcua" yaml:"opcua"`
 	SparkplugB []SparkplugBConfig `json:"sparkplug_b" yaml:"sparkplug_b"`
+	EdgeOSMQTT []EdgeOSMQTTConfig `json:"edgeos_mqtt" yaml:"edgeos_mqtt"`
+	EdgeOSNATS []EdgeOSNATSConfig `json:"edgeos_nats" yaml:"edgeos_nats"`
 	Status     map[string]int     `json:"status,omitempty" yaml:"-"`
 }
 
@@ -347,8 +349,8 @@ type HTTPConfig struct {
 
 type DevicePublishConfig struct {
 	Enable   bool     `json:"enable" yaml:"enable"`
-	Strategy string   `json:"strategy" yaml:"strategy"` // "periodic" or "cov"
-	Interval Duration `json:"interval" yaml:"interval"` // 0 means use collection interval
+	Strategy string   `json:"strategy" yaml:"strategy"` // "realtime" or "periodic"
+	Interval Duration `json:"interval" yaml:"interval"` // Push interval for periodic mode (e.g., "5s", "1m")
 }
 
 type OPCUAConfig struct {
@@ -390,6 +392,48 @@ type SparkplugBConfig struct {
 	ClientKey      string          `json:"client_key" yaml:"client_key"`
 	KeyPassword    string          `json:"key_password" yaml:"key_password"`
 	Devices        map[string]bool `json:"devices" yaml:"devices"` // Key: DeviceID, Value: Enable
+}
+
+// EdgeOSMQTTConfig defines configuration for edgeOS(MQTT) northbound channel
+type EdgeOSMQTTConfig struct {
+	ID              string                       `json:"id" yaml:"id"`
+	Name            string                       `json:"name" yaml:"name"`
+	Enable          bool                         `json:"enable" yaml:"enable"`
+	Broker          string                       `json:"broker" yaml:"broker"`
+	ClientID        string                       `json:"client_id" yaml:"client_id"`
+	NodeID          string                       `json:"node_id" yaml:"node_id"`
+	Username        string                       `json:"username" yaml:"username"`
+	Password        string                       `json:"password" yaml:"password"`
+	QoS             byte                         `json:"qos" yaml:"qos"`
+	Retain          bool                         `json:"retain" yaml:"retain"`
+	CleanSession    bool                         `json:"clean_session" yaml:"clean_session"`
+	KeepAlive       int                          `json:"keep_alive" yaml:"keep_alive"`
+	ConnectTimeout  int                          `json:"connect_timeout" yaml:"connect_timeout"`
+	AutoReconnect   bool                         `json:"auto_reconnect" yaml:"auto_reconnect"`
+	MaxReconnectInterval int                    `json:"max_reconnect_interval" yaml:"max_reconnect_interval"`
+	HeartbeatInterval string                     `json:"heartbeat_interval" yaml:"heartbeat_interval"` // e.g. "30s"
+	Devices         map[string]DevicePublishConfig `json:"devices" yaml:"devices"` // Key: DeviceID, Value: DevicePublishConfig
+}
+
+// EdgeOSNATSConfig defines configuration for edgeOS(NATS) northbound channel
+type EdgeOSNATSConfig struct {
+	ID               string                       `json:"id" yaml:"id"`
+	Name             string                       `json:"name" yaml:"name"`
+	Enable           bool                         `json:"enable" yaml:"enable"`
+	URL              string                       `json:"url" yaml:"url"`
+	ClientID         string                       `json:"client_id" yaml:"client_id"`
+	NodeID           string                       `json:"node_id" yaml:"node_id"`
+	Username         string                       `json:"username" yaml:"username"`
+	Password         string                       `json:"password" yaml:"password"`
+	Token            string                       `json:"token" yaml:"token"`
+	ConnectTimeout   int                          `json:"connect_timeout" yaml:"connect_timeout"`
+	ReconnectWait    int                          `json:"reconnect_wait" yaml:"reconnect_wait"`
+	MaxReconnects    int                          `json:"max_reconnects" yaml:"max_reconnects"`
+	PingInterval     int                          `json:"ping_interval" yaml:"ping_interval"`
+	MaxPingsOutstanding int                      `json:"max_pings_outstanding" yaml:"max_pings_outstanding"`
+	JetStreamEnabled bool                         `json:"jetstream_enabled" yaml:"jetstream_enabled"`
+	HeartbeatInterval string                      `json:"heartbeat_interval" yaml:"heartbeat_interval"` // e.g. "30s"
+	Devices          map[string]DevicePublishConfig `json:"devices" yaml:"devices"` // Key: DeviceID, Value: DevicePublishConfig
 }
 
 // EdgeRule represents an edge computing rule
@@ -470,6 +514,7 @@ type SouthboundManager interface {
 	GetChannelDevices(channelID string) []Device
 	GetDevice(channelID, deviceID string) *Device
 	WritePoint(channelID, deviceID, pointID string, value any) error
+	GetDevicePoints(channelID, deviceID string) ([]PointData, error)
 }
 
 // ProtocolConfig 协议配置

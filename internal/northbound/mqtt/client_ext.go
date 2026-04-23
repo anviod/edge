@@ -26,7 +26,14 @@ func (c *Client) retryLoop() {
 		case <-c.stopChan:
 			return
 		case <-ticker.C:
-			c.flushOfflineMessages()
+			// Check if client is enabled
+			c.configMu.RLock()
+			enable := c.config.Enable
+			c.configMu.RUnlock()
+			
+			if enable {
+				c.flushOfflineMessages()
+			}
 		}
 	}
 }

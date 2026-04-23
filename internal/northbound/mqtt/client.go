@@ -130,7 +130,13 @@ func (c *Client) UpdateConfig(cfg model.MQTTConfig) error {
 		c.Stop()
 		// Re-init stop chan
 		c.stopChan = make(chan struct{})
-		return c.Start()
+		// Only start if enabled
+		c.configMu.RLock()
+		enable := c.config.Enable
+		c.configMu.RUnlock()
+		if enable {
+			return c.Start()
+		}
 	}
 
 	// Update periodic tasks if devices config changed (but no full restart)
@@ -140,6 +146,15 @@ func (c *Client) UpdateConfig(cfg model.MQTTConfig) error {
 }
 
 func (c *Client) Start() error {
+	// Check if client is enabled
+	c.configMu.RLock()
+	enable := c.config.Enable
+	c.configMu.RUnlock()
+	
+	if !enable {
+		return nil
+	}
+	
 	// Start connection in background to support custom retry logic
 	go c.connectLoop()
 	go c.retryLoop()
@@ -273,6 +288,15 @@ func (c *Client) flushPeriodic(deviceID string, item *periodicItem) {
 
 // PublishRaw publishes raw data to a specific topic
 func (c *Client) PublishRaw(topic string, payload []byte) error {
+	// Check if client is enabled
+	c.configMu.RLock()
+	enable := c.config.Enable
+	c.configMu.RUnlock()
+	
+	if !enable {
+		return mqtt.ErrNotConnected
+	}
+	
 	connected := c.client != nil && c.client.IsConnected()
 
 	if !connected {
@@ -309,6 +333,16 @@ func (c *Client) PublishRaw(topic string, payload []byte) error {
 }
 
 func (c *Client) connectLoop() {
+	// Check if client is enabled
+	c.configMu.RLock()
+	enable := c.config.Enable
+	c.configMu.RUnlock()
+	
+	if !enable {
+		c.setStatus(StatusDisconnected)
+		return
+	}
+	
 	c.setStatus(StatusReconnecting)
 
 	c.configMu.RLock()
@@ -621,7 +655,12 @@ func (c *Client) reconnectLogic() {
 }
 
 func (c *Client) Publish(v model.Value) {
-	if c.client == nil || !c.client.IsConnected() {
+	// Check if client is enabled
+	c.configMu.RLock()
+	enable := c.config.Enable
+	c.configMu.RUnlock()
+	
+	if !enable || c.client == nil || !c.client.IsConnected() {
 		return
 	}
 
@@ -747,7 +786,12 @@ func (c *Client) flushDevice(deviceID string) {
 
 // PublishDeviceStatus publishes device online/offline status
 func (c *Client) PublishDeviceStatus(deviceID string, status int) {
-	if c.client == nil || !c.client.IsConnected() {
+	// Check if client is enabled
+	c.configMu.RLock()
+	enable := c.config.Enable
+	c.configMu.RUnlock()
+	
+	if !enable || c.client == nil || !c.client.IsConnected() {
 		return
 	}
 

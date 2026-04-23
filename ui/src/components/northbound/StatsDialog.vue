@@ -1,6 +1,6 @@
 <template>
   <a-modal v-model:visible="visible" :title="title" :width="900" :footer="false" unmount-on-close>
-    <template v-if="type === 'mqtt'">
+    <template v-if="isClientPushMode">
       <a-row :gutter="16" style="margin-bottom: 16px">
         <a-col :span="6">
           <a-card :bordered="true" style="text-align: center">
@@ -27,9 +27,23 @@
           </a-card>
         </a-col>
       </a-row>
+      <a-row :gutter="16" style="margin-bottom: 16px">
+        <a-col :span="12">
+          <a-card :bordered="true" style="text-align: center">
+            <div style="color: #6b7280; font-size: 12px">运行时长</div>
+            <div style="font-size: 24px; font-weight: 600; color: #4e5969; margin-top: 4px">{{ formatUptime(stats.uptime || 0) }}</div>
+          </a-card>
+        </a-col>
+        <a-col :span="12">
+          <a-card :bordered="true" style="text-align: center">
+            <div style="color: #6b7280; font-size: 12px">推送成功率</div>
+            <div style="font-size: 24px; font-weight: 600; color: #00b42a; margin-top: 4px">{{ successRate }}%</div>
+          </a-card>
+        </a-col>
+      </a-row>
     </template>
 
-    <template v-else>
+    <template v-else-if="isOpcuaServerMode">
       <a-row :gutter="16" style="margin-bottom: 16px">
         <a-col :span="6">
           <a-card :bordered="true" style="text-align: center">
@@ -45,14 +59,28 @@
         </a-col>
         <a-col :span="6">
           <a-card :bordered="true" style="text-align: center">
-            <div style="color: #6b7280; font-size: 12px">最近写操作</div>
-            <div style="font-size: 24px; font-weight: 600; color: #00b42a; margin-top: 4px">{{ stats.write_count || 0 }}</div>
+            <div style="color: #6b7280; font-size: 12px">最近读操作</div>
+            <div style="font-size: 24px; font-weight: 600; color: #00b42a; margin-top: 4px">{{ stats.read_count || 0 }}</div>
           </a-card>
         </a-col>
         <a-col :span="6">
           <a-card :bordered="true" style="text-align: center">
+            <div style="color: #6b7280; font-size: 12px">最近写操作</div>
+            <div style="font-size: 24px; font-weight: 600; color: #165dff; margin-top: 4px">{{ stats.write_count || 0 }}</div>
+          </a-card>
+        </a-col>
+      </a-row>
+      <a-row :gutter="16" style="margin-bottom: 16px">
+        <a-col :span="12">
+          <a-card :bordered="true" style="text-align: center">
             <div style="color: #6b7280; font-size: 12px">运行时长</div>
             <div style="font-size: 24px; font-weight: 600; color: #4e5969; margin-top: 4px">{{ formatUptime(stats.uptime || 0) }}</div>
+          </a-card>
+        </a-col>
+        <a-col :span="12">
+          <a-card :bordered="true" style="text-align: center">
+            <div style="color: #6b7280; font-size: 12px">数据吞吐量</div>
+            <div style="font-size: 24px; font-weight: 600; color: #0ea5e9; margin-top: 4px">{{ formatThroughput(stats.throughput || 0) }}</div>
           </a-card>
         </a-col>
       </a-row>
@@ -61,7 +89,7 @@
     <a-divider style="margin: 12px 0" />
 
     <div style="display: flex; align-items: center; margin-bottom: 8px">
-      <span style="font-size: 13px; font-weight: 600">实时日志 ({{ type === 'mqtt' ? 'MQTT' : 'OPC UA' }})</span>
+      <span style="font-size: 13px; font-weight: 600">实时日志 ({{ logTitle }})</span>
       <div style="flex: 1" />
       <a-switch v-model="isStreaming" size="small" style="margin-right: 8px" />
       <span style="font-size: 12px; color: #6b7280; margin-right: 16px">实时滚动</span>
@@ -96,14 +124,17 @@ import { showMessage } from '@/composables/useGlobalState'
 import request from '@/utils/request'
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
+  visible: { type: Boolean, default: false },
   type: { type: String, default: 'mqtt' },
   itemId: { type: String, default: '' }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:visible'])
 
-const visible = ref(false)
+const visible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
 const isStreaming = ref(true)
 const stats = ref({})
 const logs = ref([])
@@ -111,11 +142,37 @@ const page = ref(1)
 let timer = null
 let ws = null
 
-const title = computed(() => props.type === 'mqtt' ? 'MQTT 运行监控' : 'OPC UA 运行监控')
+const title = computed(() => {
+  if (props.type === 'mqtt') return 'MQTT 运行监控'
+  if (props.type === 'http') return 'HTTP 运行监控'
+  if (props.type === 'sparkplug_b') return 'Sparkplug B 运行监控'
+  if (props.type === 'opcua') return 'OPC UA 运行监控'
+  if (props.type === 'edgeos-mqtt') return 'edgeOS(MQTT) 运行监控'
+  if (props.type === 'edgeos-nats') return 'edgeOS(NATS) 运行监控'
+  return '运行监控'
+})
+
+const isClientPushMode = computed(() => {
+  return props.type === 'mqtt' || props.type === 'http' || props.type === 'sparkplug_b' || props.type === 'edgeos-mqtt' || props.type === 'edgeos-nats'
+})
+
+const isOpcuaServerMode = computed(() => {
+  return props.type === 'opcua'
+})
 
 const paginatedLogs = computed(() => {
   const start = (page.value - 1) * 20
   return logs.value.slice(start, start + 20)
+})
+
+const logTitle = computed(() => {
+  if (props.type === 'mqtt') return 'MQTT'
+  if (props.type === 'http') return 'HTTP'
+  if (props.type === 'sparkplug_b') return 'Sparkplug B'
+  if (props.type === 'opcua') return 'OPC UA'
+  if (props.type === 'edgeos-mqtt') return 'edgeOS(MQTT)'
+  if (props.type === 'edgeos-nats') return 'edgeOS(NATS)'
+  return '日志'
 })
 
 const disconnectDuration = computed(() => {
@@ -129,6 +186,22 @@ const disconnectDuration = computed(() => {
   return '0s'
 })
 
+const successRate = computed(() => {
+  const success = stats.value.success_count || 0
+  const fail = stats.value.fail_count || 0
+  const total = success + fail
+  if (total === 0) return 0
+  return Math.round((success / total) * 100)
+})
+
+const formatThroughput = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B'
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB'
+}
+
 const cleanup = () => {
   if (timer) { clearInterval(timer); timer = null }
   if (ws) { ws.close(); ws = null }
@@ -136,9 +209,7 @@ const cleanup = () => {
 
 onUnmounted(cleanup)
 
-watch(() => props.modelValue, (val) => { visible.value = val })
-watch(visible, (val) => {
-  emit('update:modelValue', val)
+watch(() => props.visible, (val) => {
   if (val) {
     logs.value = []
     page.value = 1
@@ -154,7 +225,13 @@ watch(visible, (val) => {
 const refreshStats = async () => {
   if (!props.itemId) return
   try {
-    const data = await request.get(`/api/northbound/${props.type}/${props.itemId}/stats`)
+    let apiType = props.type
+    // 转换类型名称以匹配后端 API 路径
+    if (apiType === 'edgeos-mqtt') apiType = 'edgeos-mqtt'
+    if (apiType === 'edgeos-nats') apiType = 'edgeos-nats'
+    if (apiType === 'sparkplug_b') apiType = 'sparkplugb'
+    
+    const data = await request.get(`/api/northbound/${apiType}/${props.itemId}/stats`, { silent: true })
     stats.value = data
   } catch (e) {}
 }
@@ -176,8 +253,15 @@ const connectWs = () => {
     if (!isStreaming.value) return
     try {
       const log = JSON.parse(event.data)
-      const component = props.type === 'mqtt' ? 'mqtt-client' : 'opcua-server'
-      if (log.component === component) {
+      let targetComponents = []
+      
+      if (isClientPushMode.value) {
+        targetComponents = ['mqtt-client', 'http-client', 'sparkplugb-client', 'edgos-mqtt-client', 'edgos-nats-client']
+      } else if (isOpcuaServerMode.value) {
+        targetComponents = ['opcua-server']
+      }
+
+      if (targetComponents.includes(log.component)) {
         logs.value.unshift(log)
         if (logs.value.length > 500) logs.value.pop()
         if (page.value !== 1) page.value = 1
@@ -237,7 +321,7 @@ const downloadLogs = () => {
   line-height: 1.4;
   background: #f8fafc;
   border: 1px solid #e5e7eb;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 8px;
 }
 
@@ -248,3 +332,4 @@ const downloadLogs = () => {
   border-bottom: 1px solid #f5f5f5;
 }
 </style>
+

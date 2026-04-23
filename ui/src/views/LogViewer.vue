@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="log-viewer-container">
         <!-- Toolbar -->
         <div class="log-toolbar">
@@ -233,7 +233,7 @@ onUnmounted(() => {
   padding: 12px 16px;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .toolbar-left {
@@ -281,7 +281,7 @@ onUnmounted(() => {
   padding: 16px;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 0;
   margin-bottom: 16px;
   color: #1e293b;
 }
@@ -358,15 +358,16 @@ onUnmounted(() => {
 
 .log-terminal::-webkit-scrollbar-track {
   background: #f1f5f9;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .log-terminal::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .log-terminal::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 </style>
+

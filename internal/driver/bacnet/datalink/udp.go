@@ -3,6 +3,7 @@ package datalink
 import (
 	"context"
 	"fmt"
+	//"log"
 	"net"
 	"strings"
 	"syscall"
@@ -102,7 +103,7 @@ func dataLink(ipAddr string, port int) (DataLink, error) {
 
 	udpConn := conn.(*net.UDPConn)
 
-	fmt.Printf("[DEBUG] UDP DataLink listening on %s:%d (Broadcast: %s)\n", ipAddr, port, broadcast.String())
+	//log.Printf("[DEBUG] UDP DataLink listening on %s:%d (Broadcast: %s)\n", ipAddr, port, broadcast.String())
 
 	return &udpDataLink{
 		listener:         udpConn,
@@ -124,7 +125,7 @@ func (c *udpDataLink) Receive(data []byte) (*btypes.Address, int, error) {
 	if err != nil {
 		return nil, n, err
 	}
-	fmt.Printf("[DEBUG] UDP Received %d bytes from %s\n", n, adr.String())
+	//log.Printf("[DEBUG] UDP Received %d bytes from %s\n", n, adr.String())
 	adr.IP = adr.IP.To4()
 	udpAddr := UDPToAddress(adr)
 	return udpAddr, n, nil
@@ -145,7 +146,7 @@ func (c *udpDataLink) Send(data []byte, npdu *btypes.NPDU, dest *btypes.Address)
 	if err != nil {
 		return 0, err
 	}
-	fmt.Printf("[DEBUG] UDP Sending %d bytes to %s\n", len(data), d.String())
+	//log.Printf("[DEBUG] UDP Sending %d bytes to %s\n", len(data), d.String())
 	return c.listener.WriteTo(data, &d)
 }
 

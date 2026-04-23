@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="channel-list-container">
     <div class="channel-header">
       <div class="header-title">
@@ -1258,7 +1258,7 @@ onMounted(() => {
   padding: 20px 24px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 4px;
+  border-radius: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(10px);
 }
@@ -1293,7 +1293,7 @@ onMounted(() => {
 /* 卡片样式 */
 .minimal-line-card {
   border: 1px solid #e2e8f0;
-  border-radius: 2px;
+  border-radius: 0;
   transition: all 0.2s ease;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.9);
@@ -1323,7 +1323,7 @@ onMounted(() => {
   padding: 2px 8px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 0;
   font-size: 12px;
   font-weight: 500;
   color: #475569;
@@ -1421,7 +1421,7 @@ onMounted(() => {
   padding: 20px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .section-header {
@@ -1608,7 +1608,7 @@ onMounted(() => {
   min-width: 0;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 20px;
   text-align: center;
   transition: all 0.2s ease;
@@ -1832,7 +1832,8 @@ onMounted(() => {
 :deep(.arco-tooltip-content) {
   font-size: 12px;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
-</style>
+</style>< / s t y l e >  
+ 

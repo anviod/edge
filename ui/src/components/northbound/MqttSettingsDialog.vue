@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { 
   IconSettings, IconApps, IconLock, IconScan, 
   IconRefresh, IconPlus 
@@ -158,14 +158,17 @@ import request from '@/utils/request'
 import { showMessage } from '@/composables/useGlobalState'
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
+  visible: { type: Boolean, default: false },
   config: { type: Object, default: null },
   allDevices: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['update:modelValue', 'saved'])
+const emit = defineEmits(['update:visible', 'saved'])
 
-const visible = ref(false)
+const visible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
 const loading = ref(false)
 const form = ref({})
 const activeTab = ref('basic')
@@ -181,12 +184,7 @@ const deviceColumns = [
 
 const deviceTableData = ref([])
 
-watch(() => props.modelValue, (val) => {
-  visible.value = val
-})
-
-watch(visible, (val) => {
-  emit('update:modelValue', val)
+watch(() => props.visible, (val) => {
   if (val) {
     if (props.config) {
       form.value = JSON.parse(JSON.stringify(props.config))
@@ -280,7 +278,8 @@ const autoFillTopics = () => {
 const saveSettings = async () => {
   loading.value = true
   try {
-    await request.post('/api/northbound/mqtt', form.value)
+    const dataToSave = { ...form.value }
+    await request.post('/api/northbound/mqtt', dataToSave)
     showMessage('MQTT 配置已保存', 'success')
     visible.value = false
     emit('saved')
@@ -337,6 +336,23 @@ const saveSettings = async () => {
 /* 表格融合规范 */
 .table-container {
   border: 1px solid #e5e7eb;
+  overflow-x: auto;
+}
+
+.table-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 12px 0;
+}
+
+.industrial-table-inline {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.industrial-table-inline :deep(.arco-table) {
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .industrial-table-inline :deep(.arco-table-th) {
@@ -344,17 +360,40 @@ const saveSettings = async () => {
   font-weight: bold;
   height: 34px;
   border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 8px;
+}
+
+.industrial-table-inline :deep(.arco-table-th:last-child) {
+  border-right: none;
 }
 
 .industrial-table-inline :deep(.arco-table-td) {
   height: 34px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 8px;
+}
+
+.industrial-table-inline :deep(.arco-table-td:last-child) {
+  border-right: none;
+}
+
+.industrial-table-inline :deep(.arco-table-td:first-child),
+.industrial-table-inline :deep(.arco-table-th:first-child) {
+  text-align: left;
+  padding-left: 12px;
 }
 
 /* 协议标签 */
 .proto-tag-mini {
   font-family: monospace;
   font-size: 10px;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 0 4px;
 }
 
@@ -382,3 +421,4 @@ const saveSettings = async () => {
   border-bottom-style: dashed;
 }
 </style>
+

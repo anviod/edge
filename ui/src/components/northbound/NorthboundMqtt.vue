@@ -87,7 +87,7 @@ const copyToClipboard = (text) => {
 <style scoped>
 .northbound-card {
   border: 1px solid #e5e7eb;
-  border-radius: 2px;
+  border-radius: 0;
   margin-bottom: 16px;
   width: 100%;
   display: flex;
@@ -132,7 +132,7 @@ const copyToClipboard = (text) => {
   font-family: monospace;
   font-size: 10px;
   padding: 0 4px;
-  border-radius: 2px;
+  border-radius: 0;
   line-height: 20px;
 }
 
@@ -182,3 +182,4 @@ const copyToClipboard = (text) => {
   white-space: nowrap;
 }
 </style>
+

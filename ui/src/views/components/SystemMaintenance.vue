@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-card class="system-maintenance-card mb-4">
     <a-card-header>
       <div class="card-title">
@@ -161,7 +161,7 @@ const handleReset = () => {
 
 /* Original styles */
 .system-maintenance-card {
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
   overflow: hidden;
@@ -187,7 +187,7 @@ const handleReset = () => {
 }
 
 .status-alert {
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid #10b981;
   background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
 }
@@ -203,7 +203,7 @@ const handleReset = () => {
 }
 
 .maintenance-card {
-  border-radius: 12px;
+  border-radius: 0;
   border: 1px solid #e5e7eb;
   background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -238,7 +238,7 @@ const handleReset = () => {
   justify-content: center;
   width: 60px;
   height: 60px;
-  border-radius: 12px;
+  border-radius: 0;
   margin: 20px auto 16px;
   background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
   color: #6b7280;
@@ -286,7 +286,7 @@ const handleReset = () => {
 }
 
 .action-btn {
-  border-radius: 8px;
+  border-radius: 0;
   font-weight: 500;
   transition: all 0.3s ease;
   min-width: 120px;

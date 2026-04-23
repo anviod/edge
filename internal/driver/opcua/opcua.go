@@ -174,7 +174,7 @@ func (d *OpcUaDriver) SetDeviceConfig(config map[string]any) error {
 		wrapper.Connected = false
 	} else {
 		wrapper.Connected = true
-		zap.L().Info("[OPC UA] Connected", zap.String("endpoint", endpoint))
+		//zap.L().Info("[OPC UA] Connected", zap.String("endpoint", endpoint))
 	}
 
 	d.clients[endpoint] = wrapper
@@ -543,7 +543,7 @@ func (d *OpcUaDriver) ReadPoints(ctx context.Context, points []model.Point) (map
 					Value:   0,
 					TS:      time.Now(),
 				}
-				zap.L().Warn("[OPC UA] Cache Miss or Nil", zap.String("point", p.ID))
+//				zap.L().Warn("[OPC UA] Cache Miss or Nil", zap.String("point", p.ID))
 			}
 		}
 
@@ -552,7 +552,7 @@ func (d *OpcUaDriver) ReadPoints(ctx context.Context, points []model.Point) (map
 		}
 
 		// If missing, log it and fallback to direct read for ALL points to ensure consistency
-		zap.L().Warn("[OPC UA] Cache missing or incomplete", zap.Int("count", len(points)))
+//		zap.L().Warn("[OPC UA] Cache missing or incomplete", zap.Int("count", len(points)))
 	} else {
 		zap.L().Debug("[OPC UA] No subscription, using direct read")
 	}

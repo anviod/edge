@@ -3,7 +3,7 @@ package bacnet
 import (
 	"edge-gateway/internal/driver/bacnet/btypes"
 	"edge-gateway/internal/driver/bacnet/encoding"
-	"log"
+	//"log"
 	"time"
 )
 
@@ -27,7 +27,7 @@ func (c *client) WhoIs(wh *WhoIsOpts) ([]btypes.Device, error) {
 	// Log the destination
 	if d, err := dest.UDPAddr(); err == nil {
 		_ = d
-		log.Printf("[DEBUG] WhoIs broadcasting to: %s (Low: %d, High: %d)\n", d.String(), wh.Low, wh.High)
+		//log.Printf("[DEBUG] WhoIs broadcasting to: %s (Low: %d, High: %d)\n", d.String(), wh.Low, wh.High)
 	}
 
 	enc := encoding.NewEncoder()

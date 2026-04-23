@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="dashboard-container">
     <!-- Header with Theme Toggle -->
     <div class="dashboard-header">
@@ -383,7 +383,7 @@ onUnmounted(() => {
 .theme-toggle {
   background: transparent;
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 6px;
   cursor: pointer;
   color: var(--arco-text-2, #64748b);
@@ -414,7 +414,7 @@ onUnmounted(() => {
 .stat-card {
   background: var(--arco-bg-2, #ffffff);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 20px;
   transition: all 0.2s ease;
 }
@@ -439,13 +439,13 @@ onUnmounted(() => {
 .stat-bar {
   height: 4px;
   background: var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   overflow: hidden;
 }
 
 .stat-progress {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 0;
   transition: width 0.3s ease;
 }
 
@@ -481,7 +481,7 @@ onUnmounted(() => {
   gap: 6px;
   padding: 4px 12px;
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   font-size: 13px;
   font-weight: 500;
   background: var(--arco-bg-2, #ffffff);
@@ -522,7 +522,7 @@ onUnmounted(() => {
 .channel-card {
   background: var(--arco-bg-2, #ffffff);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -542,7 +542,7 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -606,7 +606,7 @@ onUnmounted(() => {
   font-size: 11px;
   padding: 2px 6px;
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   font-weight: 500;
   background: var(--arco-bg-2, #ffffff);
 }
@@ -723,7 +723,7 @@ onUnmounted(() => {
 .channel-metrics {
   background: var(--arco-bg-2, #ffffff);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 12px;
 }
 
@@ -750,13 +750,13 @@ onUnmounted(() => {
 .quality-bar-container {
   height: 4px;
   background: var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   overflow: hidden;
 }
 
 .quality-bar {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 0;
   transition: width 0.3s ease;
 }
 
@@ -793,7 +793,7 @@ onUnmounted(() => {
 .empty-card {
   background: var(--arco-bg-2, #ffffff);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 40px;
   grid-column: 1 / -1;
   text-align: center;
@@ -814,7 +814,7 @@ onUnmounted(() => {
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 2px;
+  border-radius: 0;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -830,7 +830,7 @@ onUnmounted(() => {
   color: #3b82f6;
   border: 1px solid #3b82f6;
   padding: 6px 14px;
-  border-radius: 2px;
+  border-radius: 0;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -851,7 +851,7 @@ onUnmounted(() => {
 .northbound-card {
   background: var(--arco-bg-2, #ffffff);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 20px;
 }
 
@@ -884,7 +884,7 @@ onUnmounted(() => {
 .edge-compute-card {
   background: var(--arco-bg-2, #ffffff);
   border: 1px solid var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   padding: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -927,7 +927,7 @@ onUnmounted(() => {
 .edge-stat-bar {
   height: 4px;
   background: var(--arco-border, #e2e8f0);
-  border-radius: 2px;
+  border-radius: 0;
   overflow: hidden;
   margin-top: 8px;
 }
@@ -935,7 +935,7 @@ onUnmounted(() => {
 .edge-progress {
   height: 100%;
   background: #f59e0b;
-  border-radius: 2px;
+  border-radius: 0;
   transition: width 0.3s ease;
 }
 
@@ -962,3 +962,4 @@ onUnmounted(() => {
   }
 }
 </style>
+

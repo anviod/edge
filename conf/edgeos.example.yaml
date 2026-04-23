@@ -1,0 +1,40 @@
+# edgeOS 北向通道配置示例
+
+# edgeOS(MQTT) 配置
+edgeos_mqtt:
+  - id: "edgeos-mqtt-1"
+    name: "edgeOS MQTT Channel 1"
+    enable: true
+    broker: "tcp://127.0.0.1:1883"
+    client_id: "edgex-node-001"
+    node_id: "edgex-node-001"
+    username: "edgex"
+    password: "edgex-secret"
+    qos: 1
+    retain: false
+    keep_alive: 60
+    connect_timeout: 30
+    auto_reconnect: true
+    max_reconnect_interval: 300
+    heartbeat_interval: "30s"
+    devices: {}  # 空表示所有设备，或指定设备ID: {"device-001": true, "device-002": true}
+
+# edgeOS(NATS) 配置
+edgeos_nats:
+  - id: "edgeos-nats-1"
+    name: "edgeOS NATS Channel 1"
+    enable: true
+    url: "nats://127.0.0.1:4222"
+    client_id: "edgex-node-001"
+    node_id: "edgex-node-001"
+    username: "edgex"
+    password: "edgex-secret"
+    token: ""
+    connect_timeout: 30
+    reconnect_wait: 2
+    max_reconnects: 10
+    ping_interval: 20
+    max_pings_outstanding: 5
+    jetstream_enabled: true
+    heartbeat_interval: "30s"
+    devices: {}  # 空表示所有设备，或指定设备ID: {"device-001": true, "device-002": true}

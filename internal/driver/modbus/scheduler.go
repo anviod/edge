@@ -132,7 +132,7 @@ func (s *PointScheduler) Read(ctx context.Context, points []model.Point) (map[st
 		return nil, err
 	}
 
-	log.Printf("Optimized reading %d points into %d groups", len(activePoints), len(groups))
+	//log.Printf("Optimized reading %d points into %d groups", len(activePoints), len(groups))
 
 	// 3. Read groups
 	for i, group := range groups {
@@ -416,13 +416,13 @@ func (s *PointScheduler) groupPoints(points []model.Point) ([]PointGroup, error)
 		if addrMap != nil && len(infos) > 0 {
 			minAddr := infos[0].Offset
 			maxAddr := infos[len(infos)-1].Offset
-			log.Printf("Getting valid blocks for slave %d, regType %s, range %d-%d", slaveID, regType.String(), minAddr, maxAddr)
+			//log.Printf("Getting valid blocks for slave %d, regType %s, range %d-%d", slaveID, regType.String(), minAddr, maxAddr)
 			addrMap.RecordAddressRange(slaveID, regType.String(), minAddr, maxAddr)
 			validBlocks = addrMap.GetValidBlocks(slaveID, regType.String(), minAddr, maxAddr)
-			log.Printf("Found %d valid blocks", len(validBlocks))
-			for _, block := range validBlocks {
-				log.Printf("Valid block: start=%d, end=%d", block.Start, block.End)
-			}
+			//log.Printf("Found %d valid blocks", len(validBlocks))
+			// for _, block := range validBlocks {
+			// 	//log.Printf("Valid block: start=%d, end=%d", block.Start, block.End)
+			// }
 		}
 
 		// Get optimal batch size

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="opcua-point-config">
     <a-row :gutter="16">
       <a-col :span="12">

@@ -231,7 +231,7 @@ func (d *BACnetDriver) Connect(ctx context.Context) error {
 }
 
 func (d *BACnetDriver) discoverDevice(deviceID int, ip string, port int) error {
-	zap.L().Info("Discovering BACnet device", zap.Int("device_id", deviceID), zap.String("ip", ip), zap.Int("port", port))
+//	zap.L().Info("Discovering BACnet device", zap.Int("device_id", deviceID), zap.String("ip", ip), zap.Int("port", port))
 
 	// WhoIs
 	whois := &WhoIsOpts{
@@ -248,7 +248,7 @@ func (d *BACnetDriver) discoverDevice(deviceID int, ip string, port int) error {
 		if parsedIP != nil {
 			addr := datalink.IPPortToAddress(parsedIP, port)
 			whois.Destination = addr
-			zap.L().Info("Using Unicast WhoIs", zap.String("ip", ip), zap.Int("port", port))
+			//zap.L().Info("Using Unicast WhoIs", zap.String("ip", ip), zap.Int("port", port))
 		}
 	}
 
@@ -304,7 +304,7 @@ func (d *BACnetDriver) discoverDevice(deviceID int, ip string, port int) error {
 		LastDiscovery: time.Now(),
 	}
 	targetDevCtx := d.deviceContexts[deviceID]
-	zap.L().Info("Found BACnet device", zap.Int("device_id", deviceID), zap.String("addr", fmt.Sprintf("%v", targetDevCtx.Device.Addr)))
+	//zap.L().Info("Found BACnet device", zap.Int("device_id", deviceID), zap.String("addr", fmt.Sprintf("%v", targetDevCtx.Device.Addr)))
 
 	// Fix: If configured port is different from discovered port, we should prefer discovered port
 	// unless we are sure. But here we were overwriting discovered port with configured port.
@@ -312,7 +312,7 @@ func (d *BACnetDriver) discoverDevice(deviceID int, ip string, port int) error {
 	if port != 0 && len(targetDevCtx.Device.Addr.Mac) == 6 {
 		discPort := int(targetDevCtx.Device.Addr.Mac[4])<<8 | int(targetDevCtx.Device.Addr.Mac[5])
 		if discPort != port {
-			zap.L().Warn("Discovered device port differs from configured, using discovered port", zap.Int("disc_port", discPort), zap.Int("conf_port", port))
+//				zap.L().Warn("Discovered device port differs from configured, using discovered port", zap.Int("disc_port", discPort), zap.Int("conf_port", port))
 			// Do NOT overwrite. Let it use discPort.
 			// targetDevCtx.Device.Addr.Mac[4] = uint8(port >> 8)
 			// targetDevCtx.Device.Addr.Mac[5] = uint8(port & 0xFF)

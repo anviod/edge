@@ -59,6 +59,7 @@
                 <icon-arrow-left v-if="!drawerRail" :size="14" />
                 <icon-arrow-right v-else :size="14" />
                 <span v-if="!drawerRail">收起</span>
+                <span v-else>展开</span>
             </button>
         </div>
     </aside>
@@ -111,13 +112,13 @@
         <div class="page-container" v-if="!isLoginPage">
             <router-view v-slot="{ Component }">
                 <transition name="fade" mode="out-in">
-                    <component :is="Component" :key="$route.fullPath" />
+                    <component v-if="Component" :is="Component" :key="$route.fullPath" />
                 </transition>
             </router-view>
         </div>
         <router-view v-else v-slot="{ Component }">
             <transition name="fade" mode="out-in">
-                <component :is="Component" :key="$route.fullPath" />
+                <component v-if="Component" :is="Component" :key="$route.fullPath" />
             </transition>
         </router-view>
     </main>
@@ -327,10 +328,55 @@ body {
     background: #1e1e1e;
 }
 
-.dark-theme .industrial-sidebar,
+.dark-theme .industrial-sidebar {
+    background: rgba(30, 30, 30, 0.98);
+    border-color: #333;
+}
+
 .dark-theme .industrial-header {
     background: rgba(30, 30, 30, 0.98);
     border-color: #333;
+}
+
+.dark-theme .sidebar-header {
+    border-color: #333;
+}
+
+.dark-theme .sidebar-nav .nav-item {
+    color: #ccc;
+}
+
+.dark-theme .sidebar-nav .nav-item:hover {
+    background: #333;
+    color: #0ea5e9;
+}
+
+.dark-theme .sidebar-nav .nav-item-active {
+    background: #333;
+    color: #0ea5e9;
+    border-left-color: #0ea5e9;
+}
+
+.dark-theme .sidebar-footer {
+    border-color: #333;
+    background: rgba(30, 30, 30, 0.98);
+}
+
+.dark-theme .status-text {
+    color: #999;
+}
+
+.dark-theme .version-info {
+    color: #666;
+}
+
+.dark-theme .collapse-btn {
+    color: #999;
+}
+
+.dark-theme .collapse-btn:hover {
+    color: #0ea5e9;
+    background: #333;
 }
 
 .dark-theme .industrial-card {
@@ -339,14 +385,7 @@ body {
     color: #f8fafc !important;
 }
 
-.dark-theme .nav-item {
-    color: #ccc;
-}
 
-.dark-theme .nav-item:hover,
-.dark-theme .nav-item-active {
-    color: #0ea5e9;
-}
 
 .dark-theme .user-name {
     color: #f8fafc;
@@ -759,16 +798,15 @@ body {
     border-bottom: 1px solid #cbd5e1 !important;
 }
 
-/* 工业风格侧边栏 */
+/* 工业风格侧边栏 - 按照规范重构 */
 .industrial-sidebar {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    width: 160px;
-    background: rgba(255, 255, 255, 0.98);
-    border-right: 1px solid #cbd5e1;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+    width: 240px;
+    background: white;
+    border-right: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
     z-index: 100;
@@ -784,10 +822,9 @@ body {
 .sidebar-header {
     display: flex;
     align-items: center;
-    padding: 12px 14px;
+    padding: 0 16px;
     height: 56px;
-    border-bottom: 1px solid #cbd5e1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e2e8f0;
     flex-shrink: 0;
     box-sizing: border-box;
 }
@@ -796,8 +833,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     color: #0ea5e9;
     flex-shrink: 0;
 }
@@ -807,38 +844,39 @@ body {
     font-weight: 600;
     color: #0ea5e9;
     font-family: 'JetBrains Mono', monospace;
-    margin-left: 10px;
+    margin-left: 12px;
     white-space: nowrap;
 }
 
 /* 导航区域 */
 .sidebar-nav {
     flex: 1;
-    padding: 6px 0;
+    padding: 8px 0;
     overflow-y: auto;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
-    padding: 10px 14px;
-    color: #475569;
+    padding: 8px 16px;
+    color: #334155;
     text-decoration: none;
     transition: all 0.15s ease;
     border-left: 2px solid transparent;
     min-height: 40px;
     position: relative;
     outline: none;
+    border-radius: 0;
 }
 
 .nav-item:hover {
-    background: rgba(14, 165, 233, 0.05);
-    color: #0ea5e9;
+    background: #f8fafc;
+    color: #334155;
 }
 
 .nav-item-active {
-    background: rgba(14, 165, 233, 0.1);
-    color: #0ea5e9;
+    background: #f8fafc;
+    color: #0f172a;
     border-left: 2px solid #0ea5e9;
     font-weight: 500;
 }
@@ -847,8 +885,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     color: #64748b;
     flex-shrink: 0;
 }
@@ -859,19 +897,55 @@ body {
 }
 
 .nav-text {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 400;
-    margin-left: 10px;
+    margin-left: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* 侧边栏底部 */
+/* 侧边栏底部 - 状态区 */
 .sidebar-footer {
-    padding: 6px 10px;
+    padding: 16px;
     border-top: 1px solid #e2e8f0;
     flex-shrink: 0;
+    background: white;
+}
+
+.sidebar-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.status-text {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.version-info {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
 }
 
 .collapse-btn {
@@ -879,7 +953,7 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 6px;
+    padding: 8px;
     color: #64748b;
     font-size: 12px;
     background: transparent;
@@ -888,11 +962,12 @@ body {
     transition: all 0.15s ease;
     font-family: inherit;
     border-radius: 0;
+    margin-top: 8px;
 }
 
 .collapse-btn:hover {
     color: #0ea5e9;
-    background: rgba(14, 165, 233, 0.05);
+    background: #f8fafc;
 }
 
 .collapse-btn svg {
@@ -907,11 +982,10 @@ body {
     position: fixed;
     top: 0;
     right: 0;
-    left: 160px;
+    left: 240px;
     height: 56px;
     background: rgba(255, 255, 255, 0.98);
-    border-bottom: 1px solid #cbd5e1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1097,7 +1171,7 @@ body {
 }
 
 .main-content.has-sidebar {
-    margin-left: 160px;
+    margin-left: 240px;
 }
 
 .main-content.has-sidebar.is-collapsed {
@@ -1116,5 +1190,444 @@ body {
     display: inline-flex;
     margin-bottom: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== 工业级表单组件样式重构 ===== */
+/* 1. 强制所有交互组件取消 Ring 偏移，改用内边框 */
+*:focus {
+    outline: none !important;
+}
+
+:focus-visible {
+    --tw-ring-offset-width: 0px !important;
+    --tw-ring-width: 0px !important;
+    --tw-ring-offset-color: transparent !important;
+    --tw-ring-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* 2. 按钮样式重写 - 直角设计，无圆角，无阴影 */
+.arco-btn,
+.arco-button {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.arco-btn:focus,
+.arco-btn:focus-visible,
+.arco-button:focus,
+.arco-button:focus-visible {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* 默认按钮高度：32px */
+.arco-btn-size-medium {
+    height: 32px !important;
+    line-height: 30px !important;
+    font-size: 13px !important;
+}
+
+/* small 按钮高度：28px */
+.arco-btn-size-small {
+    height: 28px !important;
+    line-height: 26px !important;
+    font-size: 12px !important;
+}
+
+/* large 按钮高度：40px */
+.arco-btn-size-large {
+    height: 40px !important;
+    line-height: 38px !important;
+    font-size: 14px !important;
+}
+
+/* Primary 按钮样式 */
+.arco-btn-primary,
+.arco-button[type="primary"] {
+    background: #0ea5e9 !important;
+    border-color: #0ea5e9 !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+.arco-btn-primary:hover,
+.arco-button[type="primary"]:hover {
+    background: #0284c7 !important;
+    border-color: #0284c7 !important;
+    box-shadow: none !important;
+}
+
+.arco-btn-primary:active,
+.arco-button[type="primary"]:active {
+    background: #0369a1 !important;
+    border-color: #0369a1 !important;
+    box-shadow: none !important;
+}
+
+/* Outline 按钮样式 */
+.arco-btn-outline,
+.arco-button[type="outline"] {
+    background: transparent !important;
+    border-color: #cbd5e1 !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+}
+
+.arco-btn-outline:hover,
+.arco-button[type="outline"]:hover {
+    border-color: #0ea5e9 !important;
+    color: #0ea5e9 !important;
+    background: rgba(14, 165, 233, 0.05) !important;
+    box-shadow: none !important;
+}
+
+/* Text 按钮样式 */
+.arco-btn-text {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+}
+
+.arco-btn-text:hover {
+    color: #0ea5e9 !important;
+    background: rgba(14, 165, 233, 0.05) !important;
+}
+
+/* 3. Input 组件样式重写 - 直角设计，焦点边框变色 */
+.arco-input-wrapper,
+.arco-input,
+.arco-textarea,
+.arco-input-password {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: #ffffff;
+    border-color: #cbd5e1 !important;
+}
+
+/* Input 焦点状态 */
+.arco-input-wrapper.arco-input-focus,
+.arco-input:focus,
+.arco-textarea:focus,
+.arco-input-password.arco-input-focus {
+    border-color: #0ea5e9 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Input 悬停状态 */
+.arco-input-wrapper:hover,
+.arco-input:hover,
+.arco-textarea:hover,
+.arco-input-password:hover {
+    border-color: #94a3b8 !important;
+}
+
+.arco-input-wrapper.arco-input-focus:hover,
+.arco-input:focus:hover,
+.arco-textarea:focus:hover,
+.arco-input-password.arco-input-focus:hover {
+    border-color: #0ea5e9 !important;
+}
+
+/* Input 默认高度：32px */
+.arco-input-size-medium {
+    height: 32px !important;
+}
+
+.arco-input-size-medium .arco-input {
+    height: 32px !important;
+    line-height: 30px !important;
+}
+
+/* Input small 高度：28px */
+.arco-input-size-small {
+    height: 28px !important;
+}
+
+.arco-input-size-small .arco-input {
+    height: 28px !important;
+    line-height: 26px !important;
+}
+
+/* Input large 高度：40px */
+.arco-input-size-large {
+    height: 40px !important;
+}
+
+.arco-input-size-large .arco-input {
+    height: 40px !important;
+    line-height: 38px !important;
+}
+
+/* 4. Select 组件样式重写 */
+.arco-select-view,
+.arco-select-view-single {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: #ffffff;
+    border-color: #cbd5e1 !important;
+}
+
+.arco-select-view.arco-select-view-focus,
+.arco-select-view-single.arco-select-view-focus {
+    border-color: #0ea5e9 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.arco-select-view:hover,
+.arco-select-view-single:hover {
+    border-color: #94a3b8 !important;
+}
+
+/* Select 下拉选项 */
+.arco-select-dropdown {
+    border-radius: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.arco-select-option {
+    border-radius: 0 !important;
+}
+
+.arco-select-option:hover {
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.arco-select-option-selected {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+}
+
+/* 5. Textarea 组件 */
+.arco-textarea {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: #ffffff;
+    border-color: #cbd5e1 !important;
+}
+
+.arco-textarea:focus {
+    border-color: #0ea5e9 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* 6. Checkbox 和 Radio 组件 */
+.arco-checkbox,
+.arco-radio {
+    border-radius: 0 !important;
+}
+
+.arco-checkbox-checked .arco-checkbox-icon {
+    background: #0ea5e9 !important;
+    border-color: #0ea5e9 !important;
+}
+
+.arco-radio-checked .arco-radio-icon {
+    border-color: #0ea5e9 !important;
+}
+
+.arco-radio-checked .arco-radio-icon::after {
+    background: #0ea5e9 !important;
+}
+
+/* 7. Switch 组件 */
+.arco-switch {
+    border-radius: 0 !important;
+}
+
+.arco-switch-checked {
+    background: #0ea5e9 !important;
+}
+
+/* 8. Form Item 样式优化 */
+.arco-form-item {
+    margin-bottom: 16px;
+}
+
+.arco-form-item-label-col {
+    padding-right: 12px;
+}
+
+.arco-form-item-label {
+    font-weight: 500;
+    color: #475569;
+    font-size: 13px;
+    line-height: 32px;
+}
+
+.arco-form-item-message {
+    font-size: 12px;
+    color: #ef4444;
+}
+
+/* 9. Modal/Dialog 组件 */
+.arco-modal {
+    border-radius: 0 !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.arco-modal-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 20px;
+    background: #f8fafc;
+}
+
+.arco-modal-body {
+    padding: 20px;
+}
+
+.arco-modal-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 20px;
+}
+
+/* 10. Tabs 组件 */
+.arco-tabs-nav {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.arco-tabs-tab {
+    border-radius: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 16px;
+    height: 40px;
+    line-height: 39px;
+}
+
+.arco-tabs-tab-active {
+    border-bottom: 2px solid #0ea5e9;
+    color: #0ea5e9;
+}
+
+/* 11. InputNumber 组件 */
+.arco-input-number {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: #ffffff;
+    border-color: #cbd5e1 !important;
+}
+
+.arco-input-number:focus,
+.arco-input-number.arco-input-focus {
+    border-color: #0ea5e9 !important;
+    box-shadow: none !important;
+}
+
+/* 12. DatePicker 和 TimePicker 组件 */
+.arco-picker,
+.arco-timepicker {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: #ffffff;
+    border-color: #cbd5e1 !important;
+}
+
+.arco-picker:focus,
+.arco-picker.arco-picker-focus,
+.arco-timepicker:focus,
+.arco-timepicker.arco-input-focus {
+    border-color: #0ea5e9 !important;
+    box-shadow: none !important;
+}
+
+/* 13. Dropdown 组件 */
+.arco-dropdown {
+    border-radius: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.arco-dropdown-option {
+    border-radius: 0 !important;
+}
+
+.arco-dropdown-option:hover {
+    background: rgba(14, 165, 233, 0.05);
+}
+
+/* 14. Tag 组件 */
+.arco-tag {
+    border-radius: 0 !important;
+}
+
+/* 15. Tooltip 组件 */
+.arco-tooltip {
+    border-radius: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 16. Upload 组件 */
+.arco-upload-list-item {
+    border-radius: 0 !important;
+}
+
+.arco-upload-list-picture-card {
+    border-radius: 0 !important;
+}
+
+/* 17. Transfer 组件 */
+.arco-transfer-list {
+    border-radius: 0 !important;
+}
+
+/* 18. Tree 组件 */
+.arco-tree-node-title:hover {
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.arco-tree-node-selected .arco-tree-node-title {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+}
+
+/* 19. Card 组件 */
+.arco-card {
+    border-radius: 0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.arco-card-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 20px;
+}
+
+.arco-card-body {
+    padding: 20px;
+}
+
+/* 20. Table 组件相关表单输入 */
+.arco-table .arco-input-wrapper,
+.arco-table .arco-select-view {
+    border-radius: 0 !important;
+}
+
+/* 工业级滚动条 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+/* Firefox 滚动条 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
 }
 </style>

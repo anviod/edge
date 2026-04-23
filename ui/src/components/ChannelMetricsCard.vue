@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <v-card class="glass-card" :class="{ 'metrics-card': true, 'expanded': showDetails }">
     <v-card-text class="pa-4">
 
@@ -401,7 +401,7 @@ const formatDuration = (ms) => {
 
 .metric-item {
   padding: 6px;
-  border-radius: 6px;
+  border-radius: 0;
   transition: background 0.2s;
 }
 

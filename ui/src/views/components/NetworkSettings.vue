@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <!-- 网络接口 -->
   <a-card v-if="activeTab === 'network'" class="mb-4">
     <a-card-header>

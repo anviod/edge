@@ -1,0 +1,1424 @@
+package edgos_nats
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"edge-gateway/internal/model"
+	"edge-gateway/internal/storage"
+
+	nats "github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+)
+
+const (
+	StatusDisconnected = 0
+	StatusConnected    = 1
+	StatusReconnecting = 2
+	StatusError        = 3
+)
+
+// MessageHeader represents standard edgeOS message header
+type MessageHeader struct {
+	MessageID   string `json:"message_id"`
+	Timestamp   int64  `json:"timestamp"`
+	Source      string `json:"source"`
+	Destination string `json:"destination,omitempty"`
+	MessageType string `json:"message_type"`
+	Version     string `json:"version"`
+	CorrelationID string `json:"correlation_id,omitempty"`
+}
+
+// Message represents a standard edgeOS message
+type Message struct {
+	Header MessageHeader `json:"header"`
+	Body   interface{}   `json:"body"`
+}
+
+// Client implements edgeOS(NATS) northbound channel
+type Client struct {
+	config    model.EdgeOSNATSConfig
+	configMu  sync.RWMutex
+	nc        *nats.Conn
+	js        nats.JetStreamContext
+	nodeID    string
+
+	status    int
+	statusMu  sync.RWMutex
+	stopChan  chan struct{}
+
+	sb        model.SouthboundManager
+	storage   *storage.Storage
+	logger    *zap.Logger
+
+	// Stats
+	successCount    int64
+	failCount       int64
+	reconnectCount  int64
+	lastOfflineTime int64
+	lastOnlineTime  int64
+	publishCount   int64
+
+	// Subscriptions
+	subscriptions map[string]*nats.Subscription
+	subMu         sync.Mutex
+
+	// Device aggregation for periodic push
+	deviceAggregators  map[string]*deviceAggregator
+	aggregatorMu       sync.RWMutex
+}
+
+// NewClient creates a new edgeOS(NATS) client
+func NewClient(cfg model.EdgeOSNATSConfig, sb model.SouthboundManager, s *storage.Storage) *Client {
+	logger := zap.L().With(
+		zap.String("component", "edgos-nats-client"),
+		zap.String("client_id", cfg.ID),
+		zap.String("name", cfg.Name),
+	)
+	return &Client{
+		config:             cfg,
+		sb:                 sb,
+		storage:            s,
+		nodeID:             cfg.NodeID,
+		logger:             logger,
+		stopChan:           make(chan struct{}),
+		subscriptions:      make(map[string]*nats.Subscription),
+		deviceAggregators:  make(map[string]*deviceAggregator),
+	}
+}
+
+// GetStatus returns current connection status
+func (c *Client) GetStatus() int {
+	c.statusMu.RLock()
+	defer c.statusMu.RUnlock()
+	return c.status
+}
+
+// GetStats returns client statistics
+func (c *Client) GetStats() EdgeOSNATSStats {
+	return EdgeOSNATSStats{
+		SuccessCount:    atomic.LoadInt64(&c.successCount),
+		FailCount:       atomic.LoadInt64(&c.failCount),
+		ReconnectCount:  atomic.LoadInt64(&c.reconnectCount),
+		PublishCount:    atomic.LoadInt64(&c.publishCount),
+		LastOfflineTime: atomic.LoadInt64(&c.lastOfflineTime),
+		LastOnlineTime:  atomic.LoadInt64(&c.lastOnlineTime),
+	}
+}
+
+// EdgeOSNATSStats represents client statistics
+type EdgeOSNATSStats struct {
+	SuccessCount    int64 `json:"success_count"`
+	FailCount       int64 `json:"fail_count"`
+	ReconnectCount  int64 `json:"reconnect_count"`
+	PublishCount    int64 `json:"publish_count"`
+	LastOfflineTime int64 `json:"last_offline_time"`
+	LastOnlineTime  int64 `json:"last_online_time"`
+}
+
+// deviceAggregator aggregates points for periodic device-level push
+type deviceAggregator struct {
+	points       map[string]model.Value // pointID -> Value
+	lastPushTS   time.Time
+	pushInterval time.Duration
+	mu           sync.RWMutex
+}
+
+// UpdateConfig updates client configuration
+func (c *Client) UpdateConfig(cfg model.EdgeOSNATSConfig) error {
+	c.configMu.Lock()
+	defer c.configMu.Unlock()
+
+	needRestart := c.config.URL != cfg.URL ||
+		c.config.ClientID != cfg.ClientID ||
+		c.config.Username != cfg.Username ||
+		c.config.Password != cfg.Password ||
+		c.config.NodeID != cfg.NodeID
+
+	c.config = cfg
+	c.nodeID = cfg.NodeID
+
+	if needRestart {
+		c.Stop()
+		c.stopChan = make(chan struct{})
+		return c.Start()
+	}
+
+	return nil
+}
+
+// Start starts the edgeOS(NATS) client
+func (c *Client) Start() error {
+	go c.connectLoop()
+	go c.retryLoop()
+	go c.periodicPushLoop()
+	return nil
+}
+
+// connectLoop manages NATS connection
+func (c *Client) connectLoop() {
+	c.setStatus(StatusReconnecting)
+
+	c.configMu.RLock()
+	url := c.config.URL
+	clientID := c.config.ClientID
+	username := c.config.Username
+	password := c.config.Password
+	nodeID := c.config.NodeID
+	jetStreamEnabled := c.config.JetStreamEnabled
+	c.configMu.RUnlock()
+
+	opts := []nats.Option{
+		nats.Name(clientID),
+		nats.ReconnectWait(2 * time.Second),
+		nats.MaxReconnects(10),
+		nats.PingInterval(20 * time.Second),
+		nats.MaxPingsOutstanding(5),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			zap.L().Warn("edgeOS(NATS) Disconnected",
+				zap.Error(err),
+				zap.String("node_id", nodeID),
+				zap.String("component", "edgos-nats-client"),
+			)
+			c.setStatus(StatusDisconnected)
+			atomic.StoreInt64(&c.lastOfflineTime, time.Now().UnixMilli())
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			zap.L().Info("edgeOS(NATS) Reconnected",
+				zap.String("node_id", nodeID),
+				zap.String("component", "edgos-nats-client"),
+			)
+			c.setStatus(StatusConnected)
+			atomic.StoreInt64(&c.lastOnlineTime, time.Now().UnixMilli())
+			atomic.AddInt64(&c.reconnectCount, 1)
+
+			// Re-subscribe to command topics
+			c.subscribeToCommands()
+		}),
+		nats.ClosedHandler(func(nc *nats.Conn) {
+			zap.L().Info("edgeOS(NATS) Connection Closed",
+				zap.String("node_id", nodeID),
+				zap.String("component", "edgos-nats-client"),
+			)
+			c.setStatus(StatusDisconnected)
+		}),
+	}
+
+	if username != "" && password != "" {
+		opts = append(opts, nats.UserInfo(username, password))
+	}
+
+	// Connect to NATS
+	var err error
+	c.nc, err = nats.Connect(url, opts...)
+	if err != nil {
+		zap.L().Error("Failed to connect to NATS",
+			zap.Error(err),
+			zap.String("url", url),
+			zap.String("node_id", nodeID),
+		)
+		c.setStatus(StatusError)
+		atomic.StoreInt64(&c.lastOfflineTime, time.Now().UnixMilli())
+		return
+	}
+
+	// Enable JetStream if configured
+	if jetStreamEnabled {
+		c.js, err = c.nc.JetStream()
+		if err != nil {
+			zap.L().Error("Failed to enable JetStream",
+				zap.Error(err),
+				zap.String("node_id", nodeID),
+			)
+		} else {
+			zap.L().Info("edgeOS(NATS) JetStream enabled",
+				zap.String("node_id", nodeID),
+			)
+		}
+	}
+
+	c.setStatus(StatusConnected)
+	atomic.StoreInt64(&c.lastOnlineTime, time.Now().UnixMilli())
+
+	zap.L().Info("edgeOS(NATS) Connected",
+		zap.String("url", url),
+		zap.String("node_id", nodeID),
+		zap.String("component", "edgos-nats-client"),
+	)
+
+	// Publish node online status
+	c.publishNodeOnline()
+
+	// Subscribe to command topics
+	c.subscribeToCommands()
+}
+
+// publishNodeOnline publishes node registration and online status
+func (c *Client) publishNodeOnline() {
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	// Publish node registration
+	regMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "node_register",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":     nodeID,
+			"node_name":   "EdgeX Gateway Node",
+			"model":       "edge-gateway",
+			"version":     "1.0.0",
+			"api_version": "v1",
+			"capabilities": []string{"shadow-sync", "heartbeat", "device-control", "task-execution"},
+			"protocol":    "edgeOS(NATS)",
+			"endpoint": map[string]string{
+				"host": "127.0.0.1",
+				"port": "8082",
+			},
+		},
+	}
+
+	if err := c.publishMessage("edgex.nodes.register", regMessage); err != nil {
+		zap.L().Error("Failed to publish node registration",
+			zap.Error(err),
+			zap.String("node_id", nodeID),
+		)
+	}
+
+	// Publish online status
+	topic := fmt.Sprintf("edgex.nodes.%s.status", nodeID)
+	payload := map[string]interface{}{
+		"status":    "online",
+		"timestamp": time.Now().UnixMilli(),
+	}
+	data, _ := json.Marshal(payload)
+	if err := c.nc.Publish(topic, data); err != nil {
+		zap.L().Error("Failed to publish online status",
+			zap.Error(err),
+		)
+	}
+}
+
+// subscribeToCommands subscribes to edgeOS command subjects
+func (c *Client) subscribeToCommands() {
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	c.subMu.Lock()
+	defer c.subMu.Unlock()
+
+	// Subscribe to device discovery command
+	discoverSubject := fmt.Sprintf("edgex.cmd.%s.discover", nodeID)
+	if sub, err := c.nc.Subscribe(discoverSubject, c.handleDiscoverCommand); err != nil {
+		zap.L().Error("Failed to subscribe to discover subject",
+			zap.Error(err),
+			zap.String("subject", discoverSubject),
+		)
+	} else {
+		c.subscriptions[discoverSubject] = sub
+		zap.L().Info("Subscribed to discover subject", zap.String("subject", discoverSubject))
+	}
+
+	// Subscribe to write commands for all devices
+	writeSubject := fmt.Sprintf("edgex.cmd.%s.*.write", nodeID)
+	if sub, err := c.nc.Subscribe(writeSubject, c.handleWriteCommand); err != nil {
+		zap.L().Error("Failed to subscribe to write subject",
+			zap.Error(err),
+			zap.String("subject", writeSubject),
+		)
+	} else {
+		c.subscriptions[writeSubject] = sub
+		zap.L().Info("Subscribed to write subject", zap.String("subject", writeSubject))
+	}
+
+	// Subscribe to task control commands
+	taskSubject := fmt.Sprintf("edgex.cmd.%s.task.*.*", nodeID)
+	if sub, err := c.nc.Subscribe(taskSubject, c.handleTaskCommand); err != nil {
+		zap.L().Error("Failed to subscribe to task subject",
+			zap.Error(err),
+			zap.String("subject", taskSubject),
+		)
+	} else {
+		c.subscriptions[taskSubject] = sub
+		zap.L().Info("Subscribed to task subject", zap.String("subject", taskSubject))
+	}
+
+	// Subscribe to global node register command (triggered by EdgeOS for proactive re-registration)
+	registerSubject := "edgex.cmd.nodes.register"
+	if sub, err := c.nc.Subscribe(registerSubject, c.handleNodeRegisterCommand); err != nil {
+		zap.L().Error("Failed to subscribe to register subject",
+			zap.Error(err),
+			zap.String("subject", registerSubject),
+		)
+	} else {
+		c.subscriptions[registerSubject] = sub
+		zap.L().Info("Subscribed to register subject", zap.String("subject", registerSubject))
+	}
+
+	// Subscribe to node registration response (EdgeOS responds to our registration request)
+	responseSubject := fmt.Sprintf("edgex.nodes.%s.response", nodeID)
+	if sub, err := c.nc.Subscribe(responseSubject, c.handleRegisterResponseCommand); err != nil {
+		zap.L().Error("Failed to subscribe to response subject",
+			zap.Error(err),
+			zap.String("subject", responseSubject),
+		)
+	} else {
+		c.subscriptions[responseSubject] = sub
+		zap.L().Info("Subscribed to response subject", zap.String("subject", responseSubject))
+	}
+}
+
+// handleDiscoverCommand handles device discovery commands
+func (c *Client) handleDiscoverCommand(msg *nats.Msg) {
+	var message Message
+	if err := json.Unmarshal(msg.Data, &message); err != nil {
+		zap.L().Error("Failed to unmarshal discover command",
+			zap.Error(err),
+		)
+		return
+	}
+
+	zap.L().Info("Received discover command",
+		zap.String("message_id", message.Header.MessageID),
+	)
+
+	// Send response
+	response := Message{
+		Header: MessageHeader{
+			MessageID:    generateMessageID(),
+			Timestamp:    time.Now().UnixMilli(),
+			Source:       c.nodeID,
+			Destination:  message.Header.Source,
+			MessageType:  "discover_response",
+			Version:      "1.0",
+			CorrelationID: message.Header.MessageID,
+		},
+		Body: map[string]interface{}{
+			"success": true,
+			"message": "Discovery triggered",
+		},
+	}
+
+	data, _ := json.Marshal(response)
+	msg.Respond(data)
+}
+
+// handleWriteCommand handles write commands for devices
+func (c *Client) handleWriteCommand(msg *nats.Msg) {
+	var message Message
+	if err := json.Unmarshal(msg.Data, &message); err != nil {
+		zap.L().Error("Failed to unmarshal write command",
+			zap.Error(err),
+		)
+		return
+	}
+
+	zap.L().Info("Received write command",
+		zap.String("message_id", message.Header.MessageID),
+		zap.String("subject", msg.Subject),
+	)
+
+	// Extract device ID from subject
+	subjectParts := strings.Split(msg.Subject, ".")
+	if len(subjectParts) < 4 {
+		zap.L().Error("Invalid write subject", zap.String("subject", msg.Subject))
+		response := Message{
+			Header: MessageHeader{
+				MessageID:    generateMessageID(),
+				Timestamp:    time.Now().UnixMilli(),
+				Source:       c.nodeID,
+				Destination:  message.Header.Source,
+				MessageType:  "write_response",
+				Version:      "1.0",
+				CorrelationID: message.Header.MessageID,
+			},
+			Body: map[string]interface{}{
+				"success": false,
+				"message": "Invalid subject",
+			},
+		}
+		data, _ := json.Marshal(response)
+		msg.Respond(data)
+		return
+	}
+	deviceID := subjectParts[3]
+
+	// Parse write command body
+	body, ok := message.Body.(map[string]interface{})
+	if !ok {
+		zap.L().Error("Invalid write command body")
+		response := Message{
+			Header: MessageHeader{
+				MessageID:    generateMessageID(),
+				Timestamp:    time.Now().UnixMilli(),
+				Source:       c.nodeID,
+				Destination:  message.Header.Source,
+				MessageType:  "write_response",
+				Version:      "1.0",
+				CorrelationID: message.Header.MessageID,
+			},
+			Body: map[string]interface{}{
+				"success": false,
+				"message": "Invalid body",
+			},
+		}
+		data, _ := json.Marshal(response)
+		msg.Respond(data)
+		return
+	}
+
+	points, ok := body["points"].(map[string]interface{})
+	if !ok {
+		zap.L().Error("Invalid points in write command")
+		response := Message{
+			Header: MessageHeader{
+				MessageID:    generateMessageID(),
+				Timestamp:    time.Now().UnixMilli(),
+				Source:       c.nodeID,
+				Destination:  message.Header.Source,
+				MessageType:  "write_response",
+				Version:      "1.0",
+				CorrelationID: message.Header.MessageID,
+			},
+			Body: map[string]interface{}{
+				"success": false,
+				"message": "Invalid points",
+			},
+		}
+		data, _ := json.Marshal(response)
+		msg.Respond(data)
+		return
+	}
+
+	// Execute writes through southbound manager
+	if c.sb == nil {
+		zap.L().Error("Southbound manager not initialized")
+		response := Message{
+			Header: MessageHeader{
+				MessageID:    generateMessageID(),
+				Timestamp:    time.Now().UnixMilli(),
+				Source:       c.nodeID,
+				Destination:  message.Header.Source,
+				MessageType:  "write_response",
+				Version:      "1.0",
+				CorrelationID: message.Header.MessageID,
+			},
+			Body: map[string]interface{}{
+				"success": false,
+				"message": "Southbound not available",
+			},
+		}
+		data, _ := json.Marshal(response)
+		msg.Respond(data)
+		return
+	}
+
+	var errors []string
+	for pointID, value := range points {
+		// Try to find channel ID - use first available channel for now
+		channels := c.sb.GetChannels()
+		if len(channels) == 0 {
+			errors = append(errors, pointID+": No channels available")
+			continue
+		}
+		channelID := channels[0].ID
+
+		if err := c.sb.WritePoint(channelID, deviceID, pointID, value); err != nil {
+			zap.L().Error("Failed to write point",
+				zap.String("device", deviceID),
+				zap.String("point", pointID),
+				zap.Error(err),
+			)
+			errors = append(errors, pointID+": "+err.Error())
+		} else {
+			zap.L().Info("Write point success",
+				zap.String("device", deviceID),
+				zap.String("point", pointID),
+				zap.Any("value", value),
+			)
+		}
+	}
+
+	success := len(errors) == 0
+	errorMsg := ""
+	if len(errors) > 0 {
+		errorMsg = strings.Join(errors, "; ")
+	}
+
+	response := Message{
+		Header: MessageHeader{
+			MessageID:    generateMessageID(),
+			Timestamp:    time.Now().UnixMilli(),
+			Source:       c.nodeID,
+			Destination:  message.Header.Source,
+			MessageType:  "write_response",
+			Version:      "1.0",
+			CorrelationID: message.Header.MessageID,
+		},
+		Body: map[string]interface{}{
+			"success": success,
+			"message": errorMsg,
+		},
+	}
+
+	data, _ := json.Marshal(response)
+	msg.Respond(data)
+}
+
+// handleTaskCommand handles task control commands
+func (c *Client) handleTaskCommand(msg *nats.Msg) {
+	var message Message
+	if err := json.Unmarshal(msg.Data, &message); err != nil {
+		zap.L().Error("Failed to unmarshal task command",
+			zap.Error(err),
+		)
+		return
+	}
+
+	zap.L().Info("Received task command",
+		zap.String("message_id", message.Header.MessageID),
+		zap.String("type", message.Header.MessageType),
+	)
+
+	// For now, just acknowledge command
+	response := Message{
+		Header: MessageHeader{
+			MessageID:    generateMessageID(),
+			Timestamp:    time.Now().UnixMilli(),
+			Source:       c.nodeID,
+			Destination:  message.Header.Source,
+			MessageType:  "task_response",
+			Version:      "1.0",
+			CorrelationID: message.Header.MessageID,
+		},
+		Body: map[string]interface{}{
+			"success": true,
+			"message": "Task command received",
+		},
+	}
+
+	data, _ := json.Marshal(response)
+	msg.Respond(data)
+}
+
+// handleNodeRegisterCommand handles proactive node re-registration command from EdgeOS
+func (c *Client) handleNodeRegisterCommand(msg *nats.Msg) {
+	var message Message
+	if err := json.Unmarshal(msg.Data, &message); err != nil {
+		zap.L().Error("Failed to unmarshal node register command",
+			zap.Error(err),
+		)
+		return
+	}
+
+	zap.L().Info("Received node register command",
+		zap.String("message_id", message.Header.MessageID),
+		zap.String("source", message.Header.Source),
+	)
+
+	// Trigger node re-registration by publishing node online status again
+	c.publishNodeOnline()
+
+	// Send response back to EdgeOS
+	response := Message{
+		Header: MessageHeader{
+			MessageID:    generateMessageID(),
+			Timestamp:    time.Now().UnixMilli(),
+			Source:       c.nodeID,
+			Destination:  message.Header.Source,
+			MessageType:  "node_register_response",
+			Version:      "1.0",
+			CorrelationID: message.Header.MessageID,
+		},
+		Body: map[string]interface{}{
+			"success": true,
+			"message": "Node re-registered successfully",
+		},
+	}
+
+	data, _ := json.Marshal(response)
+	msg.Respond(data)
+}
+
+// handleRegisterResponseCommand handles registration response from EdgeOS
+func (c *Client) handleRegisterResponseCommand(msg *nats.Msg) {
+	zap.L().Info("NATS handleRegisterResponseCommand called",
+		zap.String("subject", msg.Subject),
+	)
+
+	var message Message
+	if err := json.Unmarshal(msg.Data, &message); err != nil {
+		zap.L().Error("Failed to unmarshal register response",
+			zap.Error(err),
+		)
+		return
+	}
+
+	zap.L().Info("Received register response",
+		zap.String("subject", msg.Subject),
+		zap.String("message_id", message.Header.MessageID),
+		zap.String("message_type", message.Header.MessageType),
+	)
+
+	// Check if registration was successful
+	body, ok := message.Body.(map[string]interface{})
+	if !ok {
+		zap.L().Error("Invalid register response body")
+		return
+	}
+
+	status, hasStatus := body["status"].(string)
+	zap.L().Info("Registration status check",
+		zap.Bool("hasStatus", hasStatus),
+		zap.String("status", status),
+	)
+
+	if hasStatus && status == "success" {
+		zap.L().Info("Node registration successful, publishing device report",
+			zap.String("node_id", message.Header.Source),
+		)
+		// Publish device report after successful registration
+		c.publishDeviceReport()
+	} else {
+		zap.L().Warn("Node registration not successful",
+			zap.String("status", status),
+		)
+	}
+}
+
+// publishDeviceReport publishes all device information to EdgeOS
+func (c *Client) publishDeviceReport() {
+	zap.L().Info("NATS publishDeviceReport called")
+
+	if c.sb == nil {
+		zap.L().Error("Southbound manager not initialized, cannot publish device report")
+		return
+	}
+
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	zap.L().Info("Publishing device report",
+		zap.String("node_id", nodeID),
+	)
+
+	// Get all channels and devices
+	channels := c.sb.GetChannels()
+	var devices []map[string]interface{}
+
+	for _, channel := range channels {
+		for _, device := range channel.Devices {
+			// Map device state to operating_state
+			operatingState := "ENABLED"
+			switch device.State {
+			case 2: // Offline
+				operatingState = "DISABLED"
+			case 1: // Unstable
+				operatingState = "UNSTABLE"
+			case 3: // Quarantine
+				operatingState = "QUARANTINE"
+			}
+
+			deviceInfo := map[string]interface{}{
+				"device_id":       device.ID,
+				"device_name":     device.Name,
+				"device_profile":  channel.Protocol, // Use protocol as profile
+				"service_name":    channel.Name,      // Use channel name as service
+				"labels":          []string{},
+				"description":     "",
+				"admin_state":     "ENABLED",
+				"operating_state": operatingState,
+				"properties": map[string]interface{}{
+					"protocol":    channel.Protocol,
+					"channel_id": channel.ID,
+				},
+			}
+
+			// Add config properties
+			if device.Config != nil {
+				for k, v := range device.Config {
+					deviceInfo["properties"].(map[string]interface{})[k] = v
+				}
+			}
+
+			devices = append(devices, deviceInfo)
+		}
+	}
+
+	reportMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "device_report",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":  nodeID,
+			"devices":  devices,
+		},
+	}
+
+	if err := c.publishMessage("edgex.devices.report", reportMessage); err != nil {
+		zap.L().Error("Failed to publish device report",
+			zap.Error(err),
+			zap.String("node_id", nodeID),
+		)
+	} else {
+		zap.L().Info("Device report published successfully",
+			zap.String("node_id", nodeID),
+			zap.Int("device_count", len(devices)),
+		)
+		// Immediately publish points metadata after device report
+		if err := c.PublishPointsMetadata(); err != nil {
+			zap.L().Error("Failed to publish points metadata after device report",
+				zap.Error(err),
+				zap.String("node_id", nodeID),
+			)
+		}
+	}
+}
+
+// Publish publishes a value to edgeOS
+func (c *Client) Publish(v model.Value) {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return
+	}
+
+	c.configMu.RLock()
+	devices := c.config.Devices
+	c.configMu.RUnlock()
+
+	// Check if device is enabled in config
+	deviceConfig, exists := devices[v.DeviceID]
+	if !exists || !deviceConfig.Enable {
+		return
+	}
+
+	// Handle based on strategy
+	if deviceConfig.Strategy == "periodic" {
+		// Periodic mode: aggregate points
+		c.aggregatePoint(v.DeviceID, v, deviceConfig.Interval)
+	} else {
+		// Realtime mode (default): push immediately with device-level aggregation
+		c.publishDeviceData(v.DeviceID, map[string]interface{}{v.PointID: v.Value}, v.Quality, v.TS)
+	}
+}
+
+// aggregatePoint aggregates a point for periodic push
+func (c *Client) aggregatePoint(deviceID string, v model.Value, interval model.Duration) {
+	c.aggregatorMu.Lock()
+
+	// Get or create aggregator
+	agg, exists := c.deviceAggregators[deviceID]
+	if !exists {
+		agg = &deviceAggregator{
+			points:       make(map[string]model.Value),
+			lastPushTS:   time.Now(),
+			pushInterval: time.Duration(interval),
+		}
+		c.deviceAggregators[deviceID] = agg
+	}
+
+	// Update point value
+	agg.mu.Lock()
+	agg.points[v.PointID] = v
+	agg.mu.Unlock()
+	c.aggregatorMu.Unlock()
+}
+
+// periodicPushLoop triggers periodic device-level pushes
+func (c *Client) periodicPushLoop() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.stopChan:
+			return
+		case <-ticker.C:
+			c.checkAndPushPeriodicDevices()
+		}
+	}
+}
+
+// checkAndPushPeriodicDevices checks which devices need periodic push
+func (c *Client) checkAndPushPeriodicDevices() {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return
+	}
+
+	c.aggregatorMu.RLock()
+	defer c.aggregatorMu.RUnlock()
+
+	now := time.Now()
+
+	for deviceID, agg := range c.deviceAggregators {
+		if now.Sub(agg.lastPushTS) >= agg.pushInterval {
+			c.publishAggregatedDevice(deviceID, agg)
+		}
+	}
+}
+
+// publishAggregatedDevice publishes all aggregated points for a device
+func (c *Client) publishAggregatedDevice(deviceID string, agg *deviceAggregator) {
+	agg.mu.RLock()
+	defer agg.mu.RUnlock()
+
+	if len(agg.points) == 0 {
+		return
+	}
+
+	// Build points map and find latest timestamp
+	points := make(map[string]interface{})
+	var latestTS time.Time
+	var quality string
+
+	for _, v := range agg.points {
+		points[v.PointID] = v.Value
+		if v.TS.After(latestTS) {
+			latestTS = v.TS
+		}
+		if v.Quality != "" {
+			quality = v.Quality
+		}
+	}
+
+	if quality == "" {
+		quality = "good"
+	}
+
+	// Publish device-level data
+	c.publishDeviceData(deviceID, points, quality, latestTS)
+
+	// Update last push time
+	agg.lastPushTS = time.Now()
+}
+
+// publishDeviceData publishes device-level data with all points
+func (c *Client) publishDeviceData(deviceID string, points map[string]interface{}, quality string, ts time.Time) {
+	subject := fmt.Sprintf("edgex.data.%s.%s", c.nodeID, deviceID)
+	dataMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      c.nodeID,
+			MessageType:  "data",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":   c.nodeID,
+			"device_id": deviceID,
+			"timestamp": ts.UnixMilli(),
+			"points":    points,
+			"quality":   quality,
+		},
+	}
+
+	if err := c.publishMessage(subject, dataMessage); err != nil {
+		atomic.AddInt64(&c.failCount, 1)
+		zap.L().Error("Failed to publish device data to edgeOS(NATS)",
+			zap.Error(err),
+			zap.String("device", deviceID),
+			zap.Int("points_count", len(points)),
+		)
+	} else {
+		atomic.AddInt64(&c.successCount, 1)
+		atomic.AddInt64(&c.publishCount, 1)
+	}
+}
+
+// PublishDeviceStatus publishes device status changes
+func (c *Client) PublishDeviceStatus(deviceID string, status int) {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return
+	}
+
+	c.configMu.RLock()
+	devices := c.config.Devices
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	if len(devices) > 0 {
+		if deviceConfig, ok := devices[deviceID]; !ok || !deviceConfig.Enable {
+			return
+		}
+	}
+
+	subject := fmt.Sprintf("edgex.devices.%s.%s.status", nodeID, deviceID)
+	statusStr := "online"
+	if status != 0 {
+		statusStr = "offline"
+	}
+
+	statusMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "device_status",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":   nodeID,
+			"device_id": deviceID,
+			"status":    statusStr,
+			"timestamp": time.Now().UnixMilli(),
+		},
+	}
+
+	if err := c.publishMessage(subject, statusMessage); err != nil {
+		atomic.AddInt64(&c.failCount, 1)
+		zap.L().Error("Failed to publish device status",
+			zap.Error(err),
+			zap.String("device", deviceID),
+			zap.String("subject", subject),
+		)
+	} else {
+		atomic.AddInt64(&c.successCount, 1)
+		zap.L().Info("Published device status",
+			zap.String("node_id", nodeID),
+			zap.String("device_id", deviceID),
+			zap.String("status", statusStr),
+			zap.String("subject", subject),
+		)
+	}
+}
+
+// PublishHeartbeat publishes node heartbeat
+func (c *Client) PublishHeartbeat(metrics map[string]interface{}) {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return
+	}
+
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	heartbeatMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "heartbeat",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":  nodeID,
+			"status":    "active",
+			"timestamp": time.Now().UnixMilli(),
+			"metrics":   metrics,
+		},
+	}
+
+	subject := fmt.Sprintf("edgex.heartbeat.%s", nodeID)
+	if err := c.publishMessage(subject, heartbeatMessage); err != nil {
+		zap.L().Error("Failed to publish heartbeat",
+			zap.Error(err),
+		)
+	}
+}
+
+// publishMessage publishes a message with proper error handling
+func (c *Client) publishMessage(subject string, msg Message) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	if err := c.nc.Publish(subject, data); err != nil {
+		return err
+	}
+
+	zap.L().Debug("Published to edgeOS(NATS)",
+		zap.String("subject", subject),
+		zap.String("message_type", msg.Header.MessageType),
+		zap.Int("bytes", len(data)),
+	)
+
+	return nil
+}
+
+// retryLoop handles periodic retries
+func (c *Client) retryLoop() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.stopChan:
+			return
+		case <-ticker.C:
+			if c.GetStatus() == StatusDisconnected || c.GetStatus() == StatusError {
+				go c.connectLoop()
+			}
+		}
+	}
+}
+
+// setStatus sets connection status
+func (c *Client) setStatus(s int) {
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+	c.status = s
+}
+
+// Stop stops the client
+func (c *Client) Stop() {
+	close(c.stopChan)
+
+	c.subMu.Lock()
+	for subject, sub := range c.subscriptions {
+		if err := sub.Unsubscribe(); err != nil {
+			zap.L().Error("Failed to unsubscribe",
+				zap.Error(err),
+				zap.String("subject", subject),
+			)
+		}
+		delete(c.subscriptions, subject)
+	}
+	c.subMu.Unlock()
+
+	if c.nc != nil && c.nc.IsConnected() {
+		c.configMu.RLock()
+		nodeID := c.config.NodeID
+		c.configMu.RUnlock()
+
+		// Publish offline status
+		subject := fmt.Sprintf("edgex.nodes.%s.status", nodeID)
+		payload := map[string]interface{}{
+			"status":    "offline",
+			"timestamp": time.Now().UnixMilli(),
+		}
+		data, _ := json.Marshal(payload)
+		c.nc.Publish(subject, data)
+
+		c.nc.Close()
+	}
+
+	c.setStatus(StatusDisconnected)
+}
+
+// generateMessageID generates a unique message ID
+func generateMessageID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return "msg-" + hex.EncodeToString(b)
+}
+
+// PublishRaw publishes raw data to a specific subject
+func (c *Client) PublishRaw(subject string, payload []byte) error {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return fmt.Errorf("client not connected")
+	}
+
+	if err := c.nc.Publish(subject, payload); err != nil {
+		atomic.AddInt64(&c.failCount, 1)
+		return err
+	}
+
+	atomic.AddInt64(&c.successCount, 1)
+	atomic.AddInt64(&c.publishCount, 1)
+	return nil
+}
+
+// PublishPointsMetadata publishes point definitions metadata to EdgeOS for each device separately
+func (c *Client) PublishPointsMetadata() error {
+	zap.L().Info("NATS PublishPointsMetadata called")
+
+	if c.nc == nil || !c.nc.IsConnected() {
+		zap.L().Error("NATS client not connected, cannot publish points metadata")
+		return fmt.Errorf("client not connected")
+	}
+
+	zap.L().Info("NATS client is connected, proceeding with points metadata")
+
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	if c.sb == nil {
+		return fmt.Errorf("southbound manager not initialized")
+	}
+
+	// Get all channels and devices
+	channels := c.sb.GetChannels()
+	totalDevices := 0
+	totalPoints := 0
+
+	for _, channel := range channels {
+		for _, device := range channel.Devices {
+			// Check if device is enabled in config
+			c.configMu.RLock()
+			devices := c.config.Devices
+			c.configMu.RUnlock()
+
+			if len(devices) > 0 {
+				if deviceConfig, ok := devices[device.ID]; !ok || !deviceConfig.Enable {
+					continue
+				}
+			}
+
+			// Get device points
+			points, err := c.sb.GetDevicePoints(channel.ID, device.ID)
+			if err != nil {
+				zap.L().Warn("Failed to get device points for metadata",
+					zap.String("device", device.ID),
+					zap.Error(err),
+				)
+				continue
+			}
+
+			if len(points) == 0 {
+				continue
+			}
+
+			// Build point list for this device
+			var devicePoints []map[string]interface{}
+			for _, point := range points {
+				pointInfo := map[string]interface{}{
+					"address":    point.Address,
+					"data_type":  point.DataType,
+					"point_id":   point.ID,
+					"point_name": point.Name,
+					"rw":         point.ReadWrite,
+					"unit":       point.Unit,
+				}
+				devicePoints = append(devicePoints, pointInfo)
+			}
+
+			// Send point report for this device separately
+			metadataMessage := Message{
+				Header: MessageHeader{
+					MessageID:   generateMessageID(),
+					Timestamp:   time.Now().UnixMilli(),
+					Source:      nodeID,
+					MessageType: "point_report",
+					Version:     "1.0",
+				},
+				Body: map[string]interface{}{
+					"channel_id":  channel.ID,
+					"device_id":   device.ID,
+					"node_id":     nodeID,
+					"device_name": device.Name,
+					"points":      devicePoints,
+				},
+			}
+
+			if err := c.publishMessage("edgex.points.report", metadataMessage); err != nil {
+				zap.L().Error("Failed to publish points metadata for device",
+					zap.Error(err),
+					zap.String("node_id", nodeID),
+					zap.String("device_id", device.ID),
+				)
+				continue
+			}
+
+			totalDevices++
+			totalPoints += len(devicePoints)
+		}
+	}
+
+	zap.L().Info("Points metadata published successfully",
+		zap.String("node_id", nodeID),
+		zap.Int("device_count", totalDevices),
+		zap.Int("total_point_count", totalPoints),
+	)
+	return nil
+}
+
+// PublishPointsSync publishes all point current values for a specific device to EdgeOS
+func (c *Client) PublishPointsSync(channelID, deviceID string) error {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return fmt.Errorf("client not connected")
+	}
+
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	if c.sb == nil {
+		return fmt.Errorf("southbound manager not initialized")
+	}
+
+	// Get device points
+	points, err := c.sb.GetDevicePoints(channelID, deviceID)
+	if err != nil {
+		zap.L().Warn("Failed to get device points for sync",
+			zap.String("device", deviceID),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// Build point values map
+	pointValues := make(map[string]interface{})
+	var latestTS time.Time
+	var quality string
+
+	for _, point := range points {
+		pointValues[point.ID] = point.Value
+		if point.Quality != "" {
+			quality = point.Quality
+		}
+		if !point.Timestamp.IsZero() && point.Timestamp.After(latestTS) {
+			latestTS = point.Timestamp
+		}
+	}
+
+	if quality == "" {
+		quality = "good"
+	}
+	if latestTS.IsZero() {
+		latestTS = time.Now()
+	}
+
+	syncMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "points_sync",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":   nodeID,
+			"device_id": deviceID,
+			"timestamp": latestTS.UnixMilli(),
+			"points":    pointValues,
+			"quality":   quality,
+		},
+	}
+
+	subject := fmt.Sprintf("edgex.points.%s.%s", nodeID, deviceID)
+	if err := c.publishMessage(subject, syncMessage); err != nil {
+		zap.L().Error("Failed to publish points sync",
+			zap.Error(err),
+			zap.String("device", deviceID),
+		)
+		return err
+	}
+
+	zap.L().Info("Points sync published successfully",
+		zap.String("node_id", nodeID),
+		zap.String("device_id", deviceID),
+		zap.Int("point_count", len(pointValues)),
+	)
+	return nil
+}
+
+// PublishDeviceOnline publishes sub-device online notification to EdgeOS
+func (c *Client) PublishDeviceOnline(deviceID, deviceName string, details map[string]interface{}) error {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return fmt.Errorf("client not connected")
+	}
+
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	onlineMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "device_online",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":     nodeID,
+			"device_id":   deviceID,
+			"device_name": deviceName,
+			"online_time": time.Now().UnixMilli(),
+			"status":      "online",
+			"details":     details,
+		},
+	}
+
+	subject := fmt.Sprintf("edgex.devices.%s.%s.online", nodeID, deviceID)
+	if err := c.publishMessage(subject, onlineMessage); err != nil {
+		atomic.AddInt64(&c.failCount, 1)
+		zap.L().Error("Failed to publish device online notification",
+			zap.Error(err),
+			zap.String("device_id", deviceID),
+			zap.String("subject", subject),
+		)
+		return err
+	}
+
+	atomic.AddInt64(&c.successCount, 1)
+	atomic.AddInt64(&c.publishCount, 1)
+	zap.L().Info("Published device online notification",
+		zap.String("node_id", nodeID),
+		zap.String("device_id", deviceID),
+		zap.String("device_name", deviceName),
+		zap.String("subject", subject),
+	)
+	return nil
+}
+
+// PublishDeviceOffline publishes sub-device offline notification to EdgeOS
+func (c *Client) PublishDeviceOffline(deviceID, deviceName, reason string, details map[string]interface{}) error {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return fmt.Errorf("client not connected")
+	}
+
+	c.configMu.RLock()
+	nodeID := c.config.NodeID
+	c.configMu.RUnlock()
+
+	offlineMessage := Message{
+		Header: MessageHeader{
+			MessageID:   generateMessageID(),
+			Timestamp:   time.Now().UnixMilli(),
+			Source:      nodeID,
+			MessageType: "device_offline",
+			Version:     "1.0",
+		},
+		Body: map[string]interface{}{
+			"node_id":      nodeID,
+			"device_id":    deviceID,
+			"device_name":  deviceName,
+			"offline_time": time.Now().UnixMilli(),
+			"status":       "offline",
+			"reason":       reason,
+			"details":      details,
+		},
+	}
+
+	subject := fmt.Sprintf("edgex.devices.%s.%s.offline", nodeID, deviceID)
+	if err := c.publishMessage(subject, offlineMessage); err != nil {
+		atomic.AddInt64(&c.failCount, 1)
+		zap.L().Error("Failed to publish device offline notification",
+			zap.Error(err),
+			zap.String("device_id", deviceID),
+			zap.String("subject", subject),
+		)
+		return err
+	}
+
+	atomic.AddInt64(&c.successCount, 1)
+	atomic.AddInt64(&c.publishCount, 1)
+	zap.L().Info("Published device offline notification",
+		zap.String("node_id", nodeID),
+		zap.String("device_id", deviceID),
+		zap.String("device_name", deviceName),
+		zap.String("reason", reason),
+		zap.String("subject", subject),
+	)
+	return nil
+}
+

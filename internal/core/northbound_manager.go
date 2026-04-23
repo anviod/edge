@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"edge-gateway/internal/model"
+	"edge-gateway/internal/northbound/edgos_mqtt"
+	"edge-gateway/internal/northbound/edgos_nats"
 	"edge-gateway/internal/northbound/http"
 	"edge-gateway/internal/northbound/mqtt"
 	"edge-gateway/internal/northbound/opcua"
@@ -21,36 +23,40 @@ type NorthboundStatus struct {
 }
 
 type NorthboundManager struct {
-	config           model.NorthboundConfig
-	mqttClients      map[string]*mqtt.Client
-	httpClients      map[string]*http.Client
-	opcuaServers     map[string]*opcua.Server
-	sparkplugClients map[string]*sparkplugb.Client
-	pipeline         *DataPipeline
-	sb               model.SouthboundManager
-	cm               *ChannelManager // Reference to ChannelManager for device lookups
-	storage          *storage.Storage
-	ctx              context.Context
-	cancel           context.CancelFunc
-	saveFunc         func(model.NorthboundConfig) error
-	mu               sync.RWMutex
+	config            model.NorthboundConfig
+	mqttClients       map[string]*mqtt.Client
+	httpClients       map[string]*http.Client
+	opcuaServers      map[string]*opcua.Server
+	sparkplugClients  map[string]*sparkplugb.Client
+	edgeOSMQTTClients map[string]*edgos_mqtt.Client
+	edgeOSNATSClients map[string]*edgos_nats.Client
+	pipeline          *DataPipeline
+	sb                model.SouthboundManager
+	cm                *ChannelManager // Reference to ChannelManager for device lookups
+	storage           *storage.Storage
+	ctx               context.Context
+	cancel            context.CancelFunc
+	saveFunc          func(model.NorthboundConfig) error
+	mu                sync.RWMutex
 }
 
 func NewNorthboundManager(cfg model.NorthboundConfig, pipeline *DataPipeline, sb model.SouthboundManager, s *storage.Storage, saveFunc func(model.NorthboundConfig) error) *NorthboundManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &NorthboundManager{
-		config:           cfg,
-		mqttClients:      make(map[string]*mqtt.Client),
-		httpClients:      make(map[string]*http.Client),
-		opcuaServers:     make(map[string]*opcua.Server),
-		sparkplugClients: make(map[string]*sparkplugb.Client),
-		pipeline:         pipeline,
-		sb:               sb,
-		cm:               nil, // Set via SetChannelManager
-		storage:          s,
-		ctx:              ctx,
-		cancel:           cancel,
-		saveFunc:         saveFunc,
+		config:            cfg,
+		mqttClients:       make(map[string]*mqtt.Client),
+		httpClients:       make(map[string]*http.Client),
+		opcuaServers:      make(map[string]*opcua.Server),
+		sparkplugClients:  make(map[string]*sparkplugb.Client),
+		edgeOSMQTTClients: make(map[string]*edgos_mqtt.Client),
+		edgeOSNATSClients: make(map[string]*edgos_nats.Client),
+		pipeline:          pipeline,
+		sb:                sb,
+		cm:                nil, // Set via SetChannelManager
+		storage:           s,
+		ctx:               ctx,
+		cancel:            cancel,
+		saveFunc:          saveFunc,
 	}
 }
 
@@ -108,6 +114,38 @@ func (nm *NorthboundManager) GetNorthboundStats() []NorthboundStatus {
 		})
 	}
 
+	// edgeOS(MQTT)
+	for _, cfg := range nm.config.EdgeOSMQTT {
+		status := "Stopped"
+		if !cfg.Enable {
+			status = "Disabled"
+		} else if _, ok := nm.edgeOSMQTTClients[cfg.ID]; ok {
+			status = "Running"
+		}
+		stats = append(stats, NorthboundStatus{
+			ID:     cfg.ID,
+			Name:   cfg.Name,
+			Type:   "edgeOS(MQTT)",
+			Status: status,
+		})
+	}
+
+	// edgeOS(NATS)
+	for _, cfg := range nm.config.EdgeOSNATS {
+		status := "Stopped"
+		if !cfg.Enable {
+			status = "Disabled"
+		} else if _, ok := nm.edgeOSNATSClients[cfg.ID]; ok {
+			status = "Running"
+		}
+		stats = append(stats, NorthboundStatus{
+			ID:     cfg.ID,
+			Name:   cfg.Name,
+			Type:   "edgeOS(NATS)",
+			Status: status,
+		})
+	}
+
 	return stats
 }
 
@@ -145,7 +183,7 @@ func (nm *NorthboundManager) Start() {
 			if err := server.Start(); err != nil {
 				log.Printf("Failed to start OPC UA server [%s]: %v", cfg.Name, err)
 			} else {
-				log.Printf("Northbound OPC UA server [%s] started", cfg.Name)
+				//log.Printf("Northbound OPC UA server [%s] started", cfg.Name)
 				nm.opcuaServers[cfg.ID] = server
 			}
 		}
@@ -160,6 +198,32 @@ func (nm *NorthboundManager) Start() {
 			} else {
 				log.Printf("Northbound Sparkplug B client [%s] started", cfg.Name)
 				nm.sparkplugClients[cfg.ID] = client
+			}
+		}
+	}
+
+	// Start edgeOS(MQTT) Clients
+	for _, cfg := range nm.config.EdgeOSMQTT {
+		if cfg.Enable {
+			client := edgos_mqtt.NewClient(cfg, nm.sb, nm.storage)
+			if err := client.Start(); err != nil {
+				log.Printf("Failed to start edgeOS(MQTT) client [%s]: %v", cfg.Name, err)
+			} else {
+				log.Printf("Northbound edgeOS(MQTT) client [%s] started", cfg.Name)
+				nm.edgeOSMQTTClients[cfg.ID] = client
+			}
+		}
+	}
+
+	// Start edgeOS(NATS) Clients
+	for _, cfg := range nm.config.EdgeOSNATS {
+		if cfg.Enable {
+			client := edgos_nats.NewClient(cfg, nm.sb, nm.storage)
+			if err := client.Start(); err != nil {
+				log.Printf("Failed to start edgeOS(NATS) client [%s]: %v", cfg.Name, err)
+			} else {
+				log.Printf("Northbound edgeOS(NATS) client [%s] started", cfg.Name)
+				nm.edgeOSNATSClients[cfg.ID] = client
 			}
 		}
 	}
@@ -179,6 +243,12 @@ func (nm *NorthboundManager) handleValue(v model.Value) {
 		server.Update(v)
 	}
 	for _, client := range nm.sparkplugClients {
+		client.Publish(v)
+	}
+	for _, client := range nm.edgeOSMQTTClients {
+		client.Publish(v)
+	}
+	for _, client := range nm.edgeOSNATSClients {
 		client.Publish(v)
 	}
 }
@@ -211,6 +281,155 @@ func (nm *NorthboundManager) OnDeviceStatusChange(deviceID string, status int) {
 				client.PublishDeviceStatus(deviceID, status)
 			}
 		}
+	}
+
+	// edgeOS(MQTT)
+	for _, cfg := range nm.config.EdgeOSMQTT {
+		if client, ok := nm.edgeOSMQTTClients[cfg.ID]; ok {
+			if cfg.Devices == nil || len(cfg.Devices) == 0 {
+				client.PublishDeviceStatus(deviceID, status)
+			} else if deviceConfig, exists := cfg.Devices[deviceID]; exists && deviceConfig.Enable {
+				client.PublishDeviceStatus(deviceID, status)
+			}
+		}
+	}
+
+	// edgeOS(NATS)
+	for _, cfg := range nm.config.EdgeOSNATS {
+		if client, ok := nm.edgeOSNATSClients[cfg.ID]; ok {
+			if cfg.Devices == nil || len(cfg.Devices) == 0 {
+				client.PublishDeviceStatus(deviceID, status)
+			} else if deviceConfig, exists := cfg.Devices[deviceID]; exists && deviceConfig.Enable {
+				client.PublishDeviceStatus(deviceID, status)
+			}
+		}
+	}
+
+	// Publish device online/offline notifications for edgeOS
+	nm.publishDeviceLifecycleNotification(deviceID, status)
+}
+
+// publishDeviceLifecycleNotification publishes device online/offline notifications to edgeOS
+func (nm *NorthboundManager) publishDeviceLifecycleNotification(deviceID string, status int) {
+	// Find the device to get its details
+	var device *model.Device
+	var channel *model.Channel
+
+	// Iterate through all channels to find the device
+	for _, ch := range nm.cm.GetChannels() {
+		for _, dev := range ch.Devices {
+			if dev.ID == deviceID {
+				device = &dev
+				channel = &ch
+				break
+			}
+		}
+		if device != nil {
+			break
+		}
+	}
+
+	if device == nil {
+		return
+	}
+
+	// Prepare details for notification
+	details := make(map[string]any)
+	details["protocol"] = channel.Protocol
+	if device.Config != nil {
+		for k, v := range device.Config {
+			details[k] = v
+		}
+	}
+
+	// edgeOS(MQTT)
+	for _, cfg := range nm.config.EdgeOSMQTT {
+		if client, ok := nm.edgeOSMQTTClients[cfg.ID]; ok {
+			deviceConfig, exists := cfg.Devices[deviceID]
+			if cfg.Devices == nil || len(cfg.Devices) == 0 || (exists && deviceConfig.Enable) {
+				if status == 0 {
+					// Device online
+					client.PublishDeviceOnline(deviceID, device.Name, details)
+				} else {
+					// Device offline
+					reason := "Unknown"
+					if status == 2 {
+						reason = "Connection timeout"
+					} else if status == 1 {
+						reason = "Unstable connection"
+					} else if status == 3 {
+						reason = "Quarantined"
+					}
+					client.PublishDeviceOffline(deviceID, device.Name, reason, details)
+				}
+			}
+		}
+	}
+
+	// edgeOS(NATS)
+	for _, cfg := range nm.config.EdgeOSNATS {
+		if client, ok := nm.edgeOSNATSClients[cfg.ID]; ok {
+			deviceConfig, exists := cfg.Devices[deviceID]
+			if cfg.Devices == nil || len(cfg.Devices) == 0 || (exists && deviceConfig.Enable) {
+				if status == 0 {
+					// Device online
+					client.PublishDeviceOnline(deviceID, device.Name, details)
+				} else {
+					// Device offline
+					reason := "Unknown"
+					if status == 2 {
+						reason = "Connection timeout"
+					} else if status == 1 {
+						reason = "Unstable connection"
+					} else if status == 3 {
+						reason = "Quarantined"
+					}
+					client.PublishDeviceOffline(deviceID, device.Name, reason, details)
+				}
+			}
+		}
+	}
+}
+
+// PublishPointsMetadata publishes all point definitions to all edgeOS clients
+func (nm *NorthboundManager) PublishPointsMetadata() {
+	nm.mu.RLock()
+	defer nm.mu.RUnlock()
+
+	for _, client := range nm.edgeOSMQTTClients {
+		go func(c *edgos_mqtt.Client) {
+			if err := c.PublishPointsMetadata(); err != nil {
+				log.Printf("Failed to publish points metadata via edgeOS(MQTT): %v", err)
+			}
+		}(client)
+	}
+	for _, client := range nm.edgeOSNATSClients {
+		go func(c *edgos_nats.Client) {
+			if err := c.PublishPointsMetadata(); err != nil {
+				log.Printf("Failed to publish points metadata via edgeOS(NATS): %v", err)
+			}
+		}(client)
+	}
+}
+
+// PublishPointsSync publishes all point current values for a device to all edgeOS clients
+func (nm *NorthboundManager) PublishPointsSync(channelID, deviceID string) {
+	nm.mu.RLock()
+	defer nm.mu.RUnlock()
+
+	for _, client := range nm.edgeOSMQTTClients {
+		go func(c *edgos_mqtt.Client) {
+			if err := c.PublishPointsSync(channelID, deviceID); err != nil {
+				log.Printf("Failed to publish points sync via edgeOS(MQTT): %v", err)
+			}
+		}(client)
+	}
+	for _, client := range nm.edgeOSNATSClients {
+		go func(c *edgos_nats.Client) {
+			if err := c.PublishPointsSync(channelID, deviceID); err != nil {
+				log.Printf("Failed to publish points sync via edgeOS(NATS): %v", err)
+			}
+		}(client)
 	}
 }
 
@@ -271,6 +490,12 @@ func (nm *NorthboundManager) Stop() {
 	for _, client := range nm.sparkplugClients {
 		client.Stop()
 	}
+	for _, client := range nm.edgeOSMQTTClients {
+		client.Stop()
+	}
+	for _, client := range nm.edgeOSNATSClients {
+		client.Stop()
+	}
 }
 
 func (nm *NorthboundManager) GetConfig() model.NorthboundConfig {
@@ -283,6 +508,12 @@ func (nm *NorthboundManager) GetConfig() model.NorthboundConfig {
 		status[id] = client.GetStatus()
 	}
 	for id, client := range nm.sparkplugClients {
+		status[id] = client.GetStatus()
+	}
+	for id, client := range nm.edgeOSMQTTClients {
+		status[id] = client.GetStatus()
+	}
+	for id, client := range nm.edgeOSNATSClients {
 		status[id] = client.GetStatus()
 	}
 	// OPC UA status usually implies running if in the map
@@ -478,6 +709,12 @@ func (nm *NorthboundManager) UpdateConfig(newConfig model.NorthboundConfig) {
 
 	// 处理 SparkplugB 配置变更
 	nm.updateSparkplugBClients(oldConfig.SparkplugB, newConfig.SparkplugB)
+
+	// 处理 edgeOS(MQTT) 配置变更
+	nm.updateEdgeOSMQTTClients(oldConfig.EdgeOSMQTT, newConfig.EdgeOSMQTT)
+
+	// 处理 edgeOS(NATS) 配置变更
+	nm.updateEdgeOSNATSClients(oldConfig.EdgeOSNATS, newConfig.EdgeOSNATS)
 }
 
 // updateMQTTClients 更新 MQTT 客户端

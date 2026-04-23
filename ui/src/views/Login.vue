@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="login-container">
     <div class="login-scene">
       <div class="login-panel" 
@@ -458,7 +458,7 @@ const handleForgotPassword = () => {
   padding: 32px 60px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.05), 0 6px 8px -6px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
   position: relative;
@@ -473,7 +473,7 @@ const handleForgotPassword = () => {
   right: 0;
   bottom: 0;
   border: 2px solid transparent;
-  border-radius: 12px;
+  border-radius: 0;
   pointer-events: none;
   z-index: 1;
 }
@@ -486,7 +486,7 @@ const handleForgotPassword = () => {
   right: -2px;
   bottom: -2px;
   border: 2px solid #0ea5e9;
-  border-radius: 12px;
+  border-radius: 0;
   pointer-events: none;
   z-index: 0;
   clip-path: var(--clip-path, polygon(0 100%, 100% 100%, 100% 100%, 0 100%));
@@ -601,7 +601,7 @@ const handleForgotPassword = () => {
   align-items: center;
   gap: 6px;
   border: 2px solid #0ea5e9;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 6px 12px;
   margin-right: 16px;
 }
@@ -615,7 +615,7 @@ const handleForgotPassword = () => {
   letter-spacing: 1px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 1px 6px;
 }
 
@@ -631,7 +631,7 @@ const handleForgotPassword = () => {
 :deep(.industrial-radio .arco-radio-button) {
   flex: 1;
   justify-content: center;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   font-weight: 500;
   font-size: 12px;
   white-space: nowrap;
@@ -650,7 +650,7 @@ const handleForgotPassword = () => {
 
 :deep(.arco-input-wrapper),
 :deep(.arco-input-password) {
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   border-color: #cbd5e1 !important;
 }
@@ -663,7 +663,7 @@ const handleForgotPassword = () => {
 :deep(.arco-input-wrapper.arco-input-focus),
 :deep(.arco-input-password.arco-input-focus) {
   border-color: #0ea5e9 !important;
-  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.15) !important;
+  box-shadow: none !important;
 }
 
 /* ===== LDAP 提示 ===== */
@@ -675,7 +675,7 @@ const handleForgotPassword = () => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-left: 3px solid #0ea5e9;
-  border-radius: 2px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -710,7 +710,7 @@ const handleForgotPassword = () => {
   background: rgba(239, 68, 68, 0.04);
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-left: 3px solid #ef4444;
-  border-radius: 2px;
+  border-radius: 0;
   color: #ef4444;
   font-size: 13px;
   margin-bottom: 14px;
@@ -720,22 +720,22 @@ const handleForgotPassword = () => {
 .login-submit-btn { height: 50px !important; margin-top: 10px; }
 
 :deep(.login-submit-btn.arco-btn-primary) {
-  border-radius: 8px !important;
-  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important;
+  border-radius: 0 !important;
+  background: #0ea5e9 !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3) !important;
+  box-shadow: none !important;
   transition: all 0.2s ease !important;
 }
 
 :deep(.login-submit-btn.arco-btn-primary:hover) {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4) !important;
-  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%) !important;
+  transform: none !important;
+  box-shadow: none !important;
+  background: #0284c7 !important;
 }
 
 :deep(.login-submit-btn.arco-btn-primary:active) {
-  transform: translateY(0) !important;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .terminal-decorator {
@@ -795,7 +795,7 @@ const handleForgotPassword = () => {
   .login-panel {
     width: calc(100vw - 24px);
     padding: 24px;
-    border-radius: 12px;
+    border-radius: 0;
   }
 
   .panel-topbar,
@@ -818,3 +818,5 @@ const handleForgotPassword = () => {
   }
 }
 </style>
+
+

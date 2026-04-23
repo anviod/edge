@@ -179,7 +179,7 @@ func (d *ModbusDriver) Init(config model.DriverConfig) error {
 		d.addressMap = NewValidAddressMap(d.probeEngine)
 		d.scheduler.SetAddressMap(d.addressMap)
 
-		log.Printf("Modbus smart probing enabled for channel %s", config.ChannelID)
+		//log.Printf("Modbus smart probing enabled for channel %s", config.ChannelID)
 	}
 
 	// Perform a quick MTU probe with timeout to adjust scheduler max packet size
@@ -278,7 +278,7 @@ func (d *ModbusDriver) SetSlaveID(slaveID uint8) error {
 	if d.scheduler != nil {
 		d.scheduler.SetSlaveID(slaveID)
 	}
-	log.Printf("ModbusDriver SetSlaveID: changed to %d", slaveID)
+	//log.Printf("ModbusDriver SetSlaveID: changed to %d", slaveID)
 	return nil
 }
 

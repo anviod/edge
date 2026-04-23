@@ -1,0 +1,20 @@
+/* assets/css/fonts.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+.font-mono,
+.device-id,
+.protocol-badge,
+.ip-address,
+.metric-value {
+  font-family: var(--font-mono) !important;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}

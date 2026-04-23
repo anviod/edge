@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal v-model:visible="visible" title="MQTT 接入文档" :width="900" :footer="false" unmount-on-close>
     <a-tabs v-model:active-key="activeTab" type="line">
       <a-tab-pane key="reporting" title="数据上报">
@@ -18,7 +18,7 @@
         </a-card>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">Payload 格式 (JSON)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
   "timestamp": 1678888888888,
   "node": "device_name",
   "group": "channel_name",
@@ -47,7 +47,7 @@
         </a-card>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">请求 Payload (JSON)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow-x: auto">{
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow-x: auto">{
   "uuid": "req_123456",
   "group": "channel_name",
   "node": "device_name",
@@ -67,7 +67,7 @@
         </a-card>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">响应 Payload (JSON)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
   "uuid": "req_123456",
   "success": true,
   "message": "error msg"
@@ -95,22 +95,22 @@
         </a-card>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">Payload (上线 - Online)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow-x: auto">{{ online_payload || '{\n  "status": "online",\n  "timestamp": 1678888888888\n}' }}</pre>
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow-x: auto">{{ online_payload || '{\n  "status": "online",\n  "timestamp": 1678888888888\n}' }}</pre>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">Payload (离线/遗嘱 - Offline/LWT)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{{ offline_payload || '{\n  "status": "offline",\n  "timestamp": 1678888888888\n}' }}</pre>
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{{ offline_payload || '{\n  "status": "offline",\n  "timestamp": 1678888888888\n}' }}</pre>
       </a-tab-pane>
     </a-tabs>
   </a-modal>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { IconCopy } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
+  visible: { type: Boolean, default: false },
   topic: { type: String, default: '' },
   subscribe_topic: { type: String, default: '' },
   write_response_topic: { type: String, default: '' },
@@ -119,13 +119,13 @@ const props = defineProps({
   offline_payload: { type: String, default: '' }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:visible'])
 
-const visible = ref(false)
+const visible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
 const activeTab = ref('reporting')
-
-watch(() => props.modelValue, (val) => { visible.value = val })
-watch(visible, (val) => { emit('update:modelValue', val) })
 
 const copyToClipboard = (text) => {
   if (!text) return
@@ -136,3 +136,4 @@ const copyToClipboard = (text) => {
   })
 }
 </script>
+

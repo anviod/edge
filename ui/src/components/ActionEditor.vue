@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-card class="action-editor-card" :bordered="true">
     <a-row :gutter="12">
       <!-- Type Selection -->
@@ -668,7 +668,7 @@ onMounted(() => {
 }
 
 .rounded {
-    border-radius: 4px;
+    border-radius: 0;
 }
 
 .pa-2 {
@@ -679,3 +679,5 @@ onMounted(() => {
     border: 1px solid #e5e7eb;
 }
 </style>
+
+

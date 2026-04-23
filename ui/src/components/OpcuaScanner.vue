@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal
     v-model:visible="localVisible"
     :title="'OPC-UA 点位扫描'"
@@ -946,3 +946,4 @@ const addSelected = async () => {
   }
 }
 </style>
+

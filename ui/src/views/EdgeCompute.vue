@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="edge-compute-container">
         <a-tabs v-model:active-key="tab" class="mb-4">
             <a-tab-pane key="metrics" title="监控面板">
@@ -1678,7 +1678,7 @@ onUnmounted(() => {
 
 /* 工业白色风格样式 */
 :deep(.industrial-white-modal .arco-modal) {
-    border-radius: 2px;
+    border-radius: 0;
     padding: 0;
 }
 
@@ -1912,7 +1912,7 @@ onUnmounted(() => {
 
 /* 表达式函数参考文档样式 */
 .expression-docs-dialog :deep(.arco-modal-content) {
-    border-radius: 8px;
+    border-radius: 0;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
@@ -1938,7 +1938,7 @@ onUnmounted(() => {
 }
 
 .function-table {
-    border-radius: 8px;
+    border-radius: 0;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -1966,7 +1966,7 @@ onUnmounted(() => {
     font-size: 13px;
     background-color: #f3f4f6;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 0;
     color: #374151;
 }
 
@@ -1981,7 +1981,7 @@ onUnmounted(() => {
     font-size: 13px;
     background-color: #f3f4f6;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 0;
     color: #374151;
 }
 
@@ -2003,7 +2003,7 @@ onUnmounted(() => {
 .copy-button {
     font-size: 11px;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 0;
     transition: all 0.2s ease;
 }
 
@@ -2044,3 +2044,4 @@ onUnmounted(() => {
     }
 }
 </style>
+

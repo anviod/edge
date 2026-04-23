@@ -1,99 +1,4 @@
-mqtt:
-    - id: mqtt-1
-      name: Default MQTT-1
-      enable: true
-      broker: tcp://127.0.0.1:1883
-      client_id: industrial_gateway_001
-      topic: things/{client_id}/up
-      subscribe_topic: things/{client_id}/down/req
-      status_topic: things/{client_id}/{device_id}/status
-      lwt_topic: things/{client_id}/lwt
-      device_status_topic: ""
-      device_lifecycle_topic: things/{client_id}/lifecycle
-      online_payload: '{"status":"online","device_id":"%device_id%","timestamp":"%timestamp%"}'
-      offline_payload: '{"status":"offline","device_id":"%device_id%","timestamp":"%timestamp%"}'
-      lwt_payload: '{"status":"lwt","device_id":"%device_id%","timestamp":"%timestamp%"}'
-      ignore_offline_data: false
-      write_response_topic: things/{client_id}/down/resp
-      username: ""
-      password: ""
-      cache:
-        enable: false
-        max_count: 0
-        flush_interval: ""
-      devices:
-        "3":
-            enable: true
-            strategy: periodic
-            interval: 10s
-        Room_FC_2014_2228316:
-            enable: false
-            strategy: periodic
-            interval: 10s
-        Room_FC_2014_2228317:
-            enable: false
-            strategy: periodic
-            interval: 10s
-        Room_FC_2014_2228318:
-            enable: true
-            strategy: periodic
-            interval: 10s
-        Room_FC_2014_2228319:
-            enable: false
-            strategy: periodic
-            interval: 10s
-        Room_FC_2014_2228320:
-            enable: true
-            strategy: periodic
-            interval: 10s
-        bacnet-2228316:
-            enable: true
-            strategy: periodic
-            interval: 10s
-        bacnet-2228317:
-            enable: true
-            strategy: periodic
-            interval: 10s
-        opcua-dev-1:
-            enable: false
-            strategy: periodic
-            interval: 10s
-        opcua-device-1:
-            enable: false
-            strategy: periodic
-            interval: 0s
-        remote-slave-1:
-            enable: false
-            strategy: periodic
-            interval: 0s
-        rtu-device-1:
-            enable: false
-            strategy: periodic
-            interval: 0s
-        s7-pressure-sensor:
-            enable: true
-            strategy: change
-            interval: 0s
-        s7-pump-1:
-            enable: true
-            strategy: change
-            interval: 0s
-        s7-water-meter:
-            enable: true
-            strategy: change
-            interval: 0s
-        slave-1:
-            enable: true
-            strategy: periodic
-            interval: 10s
-        slave-2:
-            enable: true
-            strategy: periodic
-            interval: 30s
-        slave-5:
-            enable: false
-            strategy: periodic
-            interval: 10s
+mqtt: []
 http: []
 opcua:
     - id: opcua-1
@@ -140,26 +45,63 @@ opcua:
         slave-3: false
         slave-4: false
         slave-5: true
-sparkplug_b:
-    - id: sparkplug-1
-      name: Default Sparkplug B
-      enable: false
-      client_id: ""
-      group_id: ""
-      node_id: ""
-      enable_alias: false
-      group_path: false
-      offline_cache: false
-      cache_mem_size: 0
-      cache_disk_size: 0
-      cache_resend_int: 0
-      broker: ""
-      port: 0
-      username: ""
-      password: ""
-      ssl: false
-      ca_cert: ""
-      client_cert: ""
-      client_key: ""
-      key_password: ""
-      devices: {}
+sparkplug_b: []
+edgeos_mqtt:
+    - id: edgeos-mqtt_1776819191276
+      name: New edgeOS MQTT Channel
+      enable: true
+      broker: tcp://127.0.0.1:1883
+      client_id: edgex-node-001
+      node_id: edgex-node-001
+      username: admin
+      password: passwd@123
+      qos: 1
+      retain: false
+      clean_session: false
+      keep_alive: 60
+      connect_timeout: 0
+      auto_reconnect: true
+      max_reconnect_interval: 0
+      heartbeat_interval: 30s
+      devices:
+        LAPTOP-5E3D21EG:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        Room_FC_2014_19:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        bacnet-16:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        bacnet-17:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        bacnet-18:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        slave-1:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        slave-2:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        slave-4:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        slave-5:
+            enable: true
+            strategy: periodic
+            interval: 10s
+        slave-7:
+            enable: true
+            strategy: periodic
+            interval: 10s
+edgeos_nats: []

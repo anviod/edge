@@ -14,7 +14,7 @@
         </a-alert>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">Topic 结构</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow-x: auto">namespace/group_id/message_type/edge_node_id/[device_id]</pre>
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow-x: auto">namespace/group_id/message_type/edge_node_id/[device_id]</pre>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">消息类型</div>
         <a-table :data="messageTypes" :bordered="false" size="small" :pagination="false">
@@ -62,7 +62,7 @@
         </a-card>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">Payload 结构 (Protobuf)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
   "timestamp": 1678888888888,
   "metrics": [
     {
@@ -112,7 +112,7 @@
         </a-card>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">命令 Payload (Protobuf)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
   "timestamp": 1678888888888,
   "metrics": [
     {
@@ -166,7 +166,7 @@
         </a-alert>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">状态 Payload (Protobuf)</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; overflow-x: auto">{
   "timestamp": 1678888888888,
   "seq": 255
 }</pre>
@@ -176,20 +176,23 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { IconCopy } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
+  visible: { type: Boolean, default: false },
   groupId: { type: String, default: '采集通道' },
   nodeId: { type: String, default: '' },
   deviceId: { type: String, default: 'device_1' }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:visible'])
 
-const visible = ref(false)
+const visible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
 const activeTab = ref('overview')
 
 const messageTypes = ref([
@@ -215,3 +218,4 @@ const copyToClipboard = (text) => {
   })
 }
 </script>
+

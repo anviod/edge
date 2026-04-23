@@ -131,7 +131,7 @@ func (c *client) ClientRun() {
 }
 
 func (c *client) handleMsg(src *btypes.Address, b []byte) {
-	log.Printf("[DEBUG] handleMsg: len=%d src=%v", len(b), src)
+//	log.Printf("[DEBUG] handleMsg: len=%d src=%v", len(b), src)
 	var header btypes.BVLC
 	var npdu btypes.NPDU
 	var apdu btypes.APDU
@@ -141,7 +141,7 @@ func (c *client) handleMsg(src *btypes.Address, b []byte) {
 		log.Printf("[ERROR] bacnet decode error: %v", err)
 		return
 	}
-	log.Printf("[DEBUG] handleMsg: BVLC Function=%x", header.Function)
+	//log.Printf("[DEBUG] handleMsg: BVLC Function=%x", header.Function)
 
 	if header.Function == btypes.BacFuncBroadcast || header.Function == btypes.BacFuncUnicast || header.Function == btypes.BacFuncForwardedNPDU {
 		// Remove the header information
@@ -173,7 +173,7 @@ func (c *client) handleMsg(src *btypes.Address, b []byte) {
 			log.Printf("[ERROR] Issue decoding APDU: %v", err)
 			return
 		}
-		log.Printf("[DEBUG] APDU DataType=%d UnconfirmedService=%d", apdu.DataType, apdu.UnconfirmedService)
+//		log.Printf("[DEBUG] APDU DataType=%d UnconfirmedService=%d", apdu.DataType, apdu.UnconfirmedService)
 		switch apdu.DataType {
 		case btypes.UnconfirmedServiceRequest:
 			if apdu.UnconfirmedService == btypes.ServiceUnconfirmedIAm {
@@ -186,16 +186,16 @@ func (c *client) handleMsg(src *btypes.Address, b []byte) {
 				}
 				// Populate Source for IAm
 				iam.Addr = *src
-				log.Printf("[INFO] Received IAm from %d, Src: %v", iam.ID.Instance, src)
+				//log.Printf("[INFO] Received IAm from %d, Src: %v", iam.ID.Instance, src)
 
 				c.utsm.Publish(int(iam.ID.Instance), iam)
 			} else if apdu.UnconfirmedService == btypes.ServiceUnconfirmedWhoIs {
 				dec := encoding.NewDecoder(apdu.RawData)
 				var low, high int32
 				dec.WhoIs(&low, &high)
-				log.Printf("[DEBUG] Received WhoIs request (Low: %d, High: %d) from %v - ignoring", low, high, src)
+				//log.Printf("[DEBUG] Received WhoIs request (Low: %d, High: %d) from %v - ignoring", low, high, src)
 			} else {
-				log.Printf("[DEBUG] Unconfirmed Service: %d from %v", apdu.UnconfirmedService, src)
+				//log.Printf("[DEBUG] Unconfirmed Service: %d from %v", apdu.UnconfirmedService, src)
 			}
 		case btypes.SimpleAck:
 			log.Printf("[DEBUG] Received Simple Ack")
@@ -204,7 +204,7 @@ func (c *client) handleMsg(src *btypes.Address, b []byte) {
 				return
 			}
 		case btypes.ComplexAck:
-			log.Printf("[DEBUG] Received Complex Ack")
+			//log.Printf("[DEBUG] Received Complex Ack")
 			err := c.tsm.Send(int(apdu.InvokeId), send)
 			if err != nil {
 				return

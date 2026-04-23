@@ -18,6 +18,11 @@
             <template #icon><icon-settings :size="14" /></template>
           </a-button>
         </a-tooltip>
+        <a-tooltip content="运行监控">
+          <a-button type="text" size="mini" @click="$emit('stats', item)">
+            <template #icon><icon-bar-chart :size="14" /></template>
+          </a-button>
+        </a-tooltip>
         <a-tooltip content="删除">
           <a-button type="text" size="mini" status="danger" @click="$emit('delete', 'sparkplug_b', item.id)">
             <template #icon><icon-delete :size="14" /></template>
@@ -47,7 +52,8 @@
     </div>
 
     <template #actions>
-      <a-tag v-if="connectionStatus && connectionStatus[item.id] === 1" color="green" size="small">已连接</a-tag>
+      <a-tag v-if="!item.enable" color="gray" size="small">未启用</a-tag>
+      <a-tag v-else-if="connectionStatus && connectionStatus[item.id] === 1" color="green" size="small">已连接</a-tag>
       <a-tag v-else-if="connectionStatus && connectionStatus[item.id] === 2" color="orangered" size="small">重连中</a-tag>
       <a-tag v-else color="red" size="small">连接断开</a-tag>
     </template>
@@ -62,7 +68,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { IconSettings, IconDelete, IconCloud, IconFolder, IconIdcard, IconCopy, IconQuestionCircle } from '@arco-design/web-vue/es/icon'
+import { IconSettings, IconDelete, IconCloud, IconFolder, IconIdcard, IconCopy, IconQuestionCircle, IconBarChart } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 import SparkplugHelpDialog from './SparkplugHelpDialog.vue'
 
@@ -71,7 +77,7 @@ defineProps({
   connectionStatus: { type: Object, default: () => ({}) }
 })
 
-defineEmits(['settings', 'delete'])
+defineEmits(['settings', 'delete', 'stats'])
 
 const helpVisible = ref(false)
 const currentItem = ref(null)
@@ -93,7 +99,7 @@ const copyToClipboard = (text) => {
 <style scoped>
 .northbound-card {
   border: 1px solid #e5e7eb;
-  border-radius: 2px;
+  border-radius: 0;
   margin-bottom: 16px;
   width: 100%;
   display: flex;
@@ -124,7 +130,7 @@ const copyToClipboard = (text) => {
   font-family: monospace;
   font-size: 10px;
   padding: 0 4px;
-  border-radius: 2px;
+  border-radius: 0;
   line-height: 20px;
 }
 
@@ -171,3 +177,4 @@ const copyToClipboard = (text) => {
   white-space: nowrap;
 }
 </style>
+

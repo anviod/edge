@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal 
     :visible="props.visible" 
     @update:visible="handleClose" 
@@ -441,7 +441,7 @@ const flattenOpcNodes = (nodes, level = 0) => {
   gap: 6px;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   transition: all 0.2s ease;
 }
 
@@ -482,7 +482,7 @@ const flattenOpcNodes = (nodes, level = 0) => {
 }
 
 .rect-tag {
-  border-radius: 2px;
+  border-radius: 0;
   margin-right: 8px;
   white-space: nowrap;
 }

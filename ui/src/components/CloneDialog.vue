@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal
     :visible="visible"
     title="克隆其它设备点位"

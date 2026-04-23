@@ -1,3 +1,54 @@
+- id: jxy3kvpohmetzct0
+  name: BACnet-1
+  protocol: bacnet-ip
+  enable: true
+  config:
+    baudRate: 9600
+    byte_order_4: ABCD
+    connectionType: serial
+    dataBits: 8
+    enableSmartProbe: false
+    instruction_interval: 10
+    ip: 192.168.3.112
+    key: ""
+    max_retries: 3
+    parity: E
+    probeEnableMTU: true
+    probeMaxConsecutive: 20
+    probeMaxDepth: 6
+    probeTimeout: 3000
+    retry_interval: 100
+    start_address: 1
+    stopBits: 1
+  devices:
+    - id: bacnet-18
+      name: ""
+      enable: false
+      interval: 0s
+      device_file: conf/devices/bacnet-ip/bacnet-2228318.yaml
+      config: {}
+      points: []
+    - id: bacnet-16
+      name: ""
+      enable: false
+      interval: 0s
+      device_file: conf/devices/bacnet-ip/bacnet-2228316.yaml
+      config: {}
+      points: []
+    - id: bacnet-17
+      name: ""
+      enable: false
+      interval: 0s
+      device_file: conf/devices/bacnet-ip/bacnet-2228317.yaml
+      config: {}
+      points: []
+    - id: Room_FC_2014_19
+      name: ""
+      enable: false
+      interval: 0s
+      device_file: conf/devices/bacnet-ip/Room_FC_2014_2228319.yaml
+      config: {}
+      points: []
 - id: 1srhjw7e35hayk76
   name: OPCUA-10
   protocol: opc-ua
@@ -82,56 +133,5 @@
       enable: false
       interval: 0s
       device_file: conf/devices/modbus-tcp/slave-7.yaml
-      config: {}
-      points: []
-- id: jxy3kvpohmetzct0
-  name: BACnet-1
-  protocol: bacnet-ip
-  enable: true
-  config:
-    baudRate: 9600
-    byte_order_4: ABCD
-    connectionType: serial
-    dataBits: 8
-    enableSmartProbe: false
-    instruction_interval: 10
-    ip: 192.168.3.112
-    key: ""
-    max_retries: 3
-    parity: E
-    probeEnableMTU: true
-    probeMaxConsecutive: 20
-    probeMaxDepth: 6
-    probeTimeout: 3000
-    retry_interval: 100
-    start_address: 1
-    stopBits: 1
-  devices:
-    - id: bacnet-18
-      name: ""
-      enable: false
-      interval: 0s
-      device_file: conf/devices/bacnet-ip/bacnet-2228318.yaml
-      config: {}
-      points: []
-    - id: bacnet-16
-      name: ""
-      enable: false
-      interval: 0s
-      device_file: conf/devices/bacnet-ip/bacnet-2228316.yaml
-      config: {}
-      points: []
-    - id: bacnet-17
-      name: ""
-      enable: false
-      interval: 0s
-      device_file: conf/devices/bacnet-ip/bacnet-2228317.yaml
-      config: {}
-      points: []
-    - id: Room_FC_2014_19
-      name: ""
-      enable: false
-      interval: 0s
-      device_file: conf/devices/bacnet-ip/Room_FC_2014_2228319.yaml
       config: {}
       points: []

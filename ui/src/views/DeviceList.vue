@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="device-list-container">
     <div class="device-header">
       <div class="header-left">
@@ -1040,7 +1040,7 @@ onMounted(() => {
   color: white;
   padding: 0 4px;
   width: fit-content;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .title-text {
@@ -1053,7 +1053,7 @@ onMounted(() => {
 
 .industrial-card {
   border: 1px solid #cbd5e1 !important;
-  border-radius: 2px;
+  border-radius: 0;
   box-shadow: 6px 6px 0px #e2e8f0;
 }
 
@@ -1222,3 +1222,4 @@ onMounted(() => {
   }
 }
 </style>
+

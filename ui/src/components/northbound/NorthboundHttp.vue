@@ -13,6 +13,11 @@
             <template #icon><icon-settings :size="14" /></template>
           </a-button>
         </a-tooltip>
+        <a-tooltip content="运行监控">
+          <a-button type="text" size="mini" @click="$emit('stats', item)">
+            <template #icon><icon-bar-chart :size="14" /></template>
+          </a-button>
+        </a-tooltip>
         <a-tooltip content="删除">
           <a-button type="text" size="mini" status="danger" @click="$emit('delete', 'http', item.id)">
             <template #icon><icon-delete :size="14" /></template>
@@ -50,14 +55,14 @@
 </template>
 
 <script setup>
-import { IconSettings, IconDelete, IconCloud, IconSend, IconCodeBlock, IconCopy } from '@arco-design/web-vue/es/icon'
+import { IconSettings, IconDelete, IconCloud, IconSend, IconCodeBlock, IconCopy, IconBarChart } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 
 defineProps({
   items: { type: Array, default: () => [] }
 })
 
-defineEmits(['settings', 'delete'])
+defineEmits(['settings', 'delete', 'stats'])
 
 const copyToClipboard = (text) => {
   navigator.clipboard.writeText(text).then(() => {
@@ -71,7 +76,7 @@ const copyToClipboard = (text) => {
 <style scoped>
 .northbound-card {
   border: 1px solid #e5e7eb;
-  border-radius: 2px;
+  border-radius: 0;
   margin-bottom: 16px;
   width: 100%;
   display: flex;
@@ -102,7 +107,7 @@ const copyToClipboard = (text) => {
   font-family: monospace;
   font-size: 10px;
   padding: 0 4px;
-  border-radius: 2px;
+  border-radius: 0;
   line-height: 20px;
 }
 
@@ -149,3 +154,4 @@ const copyToClipboard = (text) => {
   white-space: nowrap;
 }
 </style>
+

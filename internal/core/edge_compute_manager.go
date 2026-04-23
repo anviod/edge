@@ -185,7 +185,7 @@ func (em *EdgeComputeManager) LoadRules(rules []model.EdgeRule) {
 		em.rules[r.ID] = r
 	}
 	em.rebuildIndex()
-	log.Printf("Loaded %d edge computing rules", len(rules))
+	//log.Printf("Loaded %d edge computing rules", len(rules))
 }
 
 func (em *EdgeComputeManager) Start() {
@@ -204,7 +204,7 @@ func (em *EdgeComputeManager) Start() {
 	// Start retry loop
 	go em.retryLoop()
 
-	log.Println("Edge Compute Manager started with", em.workerCount, "workers")
+	//log.Println("Edge Compute Manager started with", em.workerCount, "workers")
 }
 
 func (em *EdgeComputeManager) Stop() {
@@ -1023,7 +1023,7 @@ func (em *EdgeComputeManager) executeActions(ruleID string, actions []model.Rule
 				em.actionHook(ruleID, act, val, env, err)
 			}
 			if err != nil {
-				log.Printf("[EdgeAction] Action failed: %v", err)
+	//				log.Printf("[EdgeAction] Action failed: %v", err)
 				em.saveFailedAction(ruleID, act, val, env, err.Error())
 			}
 		}(action)
@@ -1141,7 +1141,7 @@ func (em *EdgeComputeManager) saveFailedAction(ruleID string, action model.RuleA
 		Env:        env,
 	}
 	if err := em.store.SaveData("DataCache", fa.ID, fa); err != nil {
-		log.Printf("Failed to save failed action: %v", err)
+		//log.Printf("Failed to save failed action: %v", err)
 	}
 }
 
@@ -1547,7 +1547,7 @@ func (em *EdgeComputeManager) executeDeviceControl(ctx context.Context, ruleID s
 			if cid != "" && did != "" && pid != "" {
 				expressionHandled := false
 				if expression == "" {
-					log.Printf("[EdgeAction] Info: Empty expression for %s/%s/%s, using direct value write", cid, did, pid)
+					//log.Printf("[EdgeAction] Info: Empty expression for %s/%s/%s, using direct value write", cid, did, pid)
 				}
 
 				if expression != "" {
@@ -1762,7 +1762,7 @@ func (em *EdgeComputeManager) restoreState() {
 		}
 		return nil
 	})
-	log.Println("Edge Compute state restored from DB")
+	//log.Println("Edge Compute state restored from DB")
 }
 
 func (em *EdgeComputeManager) saveRuleState(ruleID string) {

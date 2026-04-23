@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="edge-compute-container">
     <a-tabs v-model:active-key="activeTab" class="mb-4">
       <a-tab-pane key="time" title="时间同步" />
@@ -310,7 +310,7 @@ onMounted(loadConfig)
   font-size: 12px;
   color: var(--color-gray-900);
   padding: 2px 4px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--color-gray-50);
   border-left: 2px solid #e5e7eb;
 }
@@ -324,7 +324,7 @@ onMounted(loadConfig)
 
 .metrics-card {
   border: 1px solid #e5e7eb;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 16px;
   height: 100%;
   background: #ffffff;
@@ -424,3 +424,4 @@ onMounted(loadConfig)
   }
 }
 </style>
+

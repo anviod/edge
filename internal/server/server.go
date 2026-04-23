@@ -20,6 +20,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
 )
 
@@ -84,6 +87,10 @@ func NewServer(cm *core.ChannelManager, st *storage.Storage, pl *core.DataPipeli
 }
 
 func (s *Server) Start(addr string) error {
+	// 启动时发布点位元数据
+	if s.nbm != nil {
+		go s.nbm.PublishPointsMetadata()
+	}
 	go s.broadcastLoop()
 	return s.app.Listen(addr)
 }
@@ -261,11 +268,26 @@ func (s *Server) setupRoutes() {
 	// 北向数据上报配置
 	api.Get("/northbound/config", s.getNorthboundConfig)
 	api.Post("/northbound/mqtt", s.updateMQTTConfig)
+	api.Delete("/northbound/mqtt/:id", s.deleteMQTTConfig) // MQTT Delete
 	api.Post("/northbound/http", s.updateHTTPConfig)       // New HTTP Config
 	api.Delete("/northbound/http/:id", s.deleteHTTPConfig) // New HTTP Delete
 	api.Post("/northbound/opcua", s.updateOPCUAConfig)
 	api.Get("/northbound/opcua/:id/stats", s.getOPCUAStats)
 	api.Get("/northbound/mqtt/:id/stats", s.getMQTTStats)
+	api.Delete("/northbound/sparkplug_b/:id", s.deleteSparkplugBConfig) // Sparkplug B Delete
+
+	// edgeOS(MQTT)
+	api.Post("/northbound/edgeos-mqtt", s.updateEdgeOSMQTTConfig)
+	api.Delete("/northbound/edgeos-mqtt/:id", s.deleteEdgeOSMQTTConfig)
+	api.Get("/northbound/edgeos-mqtt/:id/stats", s.getEdgeOSMQTTStats)
+	api.Post("/northbound/edgeos-mqtt/publish", s.publishEdgeOSMQTT)
+
+	// edgeOS(NATS)
+	api.Post("/northbound/edgeos-nats", s.updateEdgeOSNATSConfig)
+	api.Delete("/northbound/edgeos-nats/:id", s.deleteEdgeOSNATSConfig)
+	api.Get("/northbound/edgeos-nats/:id/stats", s.getEdgeOSNATSStats)
+	api.Post("/northbound/edgeos-nats/publish", s.publishEdgeOSNATS)
+
 	api.Get("/points", s.getAllPoints)
 
 	// Edge Compute
@@ -529,12 +551,26 @@ func (s *Server) getDashboardSummary(c *fiber.Ctx) error {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	// Mock System Stats for now (except memory)
-	// In production, use shirou/gopsutil
+	// Get real system stats using gopsutil
+	cpuUsage := 0.0
+	if cpuInfos, err := cpu.Percent(0, false); err == nil && len(cpuInfos) > 0 {
+		cpuUsage = cpuInfos[0]
+	}
+
+	diskUsage := 0.0
+	if diskStats, err := disk.Usage("/"); err == nil {
+		diskUsage = diskStats.UsedPercent
+	}
+
+	memoryUsage := 0.0
+	if memStats, err := mem.VirtualMemory(); err == nil {
+		memoryUsage = memStats.UsedPercent
+	}
+
 	sys := SystemStats{
-		CPUUsage:    rand.Float64() * 20, // Mock 0-20%
-		MemoryUsage: float64(m.Alloc) / 1024 / 1024,
-		DiskUsage:   45.5, // Mock
+		CPUUsage:    cpuUsage,
+		MemoryUsage: memoryUsage,
+		DiskUsage:   diskUsage,
 		GoRoutines:  runtime.NumGoroutine(),
 	}
 
@@ -617,6 +653,10 @@ func (s *Server) addDevice(c *fiber.Ctx) error {
 				s.dsm.UpdateDeviceConfig(dev.ID, dev.Storage)
 			}
 		}
+		// 触发点位元数据同步到 edgeOS
+		if s.nbm != nil {
+			s.nbm.PublishPointsMetadata()
+		}
 		return c.JSON(devices)
 
 	case map[string]interface{}:
@@ -633,6 +673,10 @@ func (s *Server) addDevice(c *fiber.Ctx) error {
 		}
 		if s.dsm != nil {
 			s.dsm.UpdateDeviceConfig(dev.ID, dev.Storage)
+		}
+		// 触发点位元数据同步到 edgeOS
+		if s.nbm != nil {
+			s.nbm.PublishPointsMetadata()
 		}
 		return c.JSON(dev)
 
@@ -661,6 +705,10 @@ func (s *Server) updateDevice(c *fiber.Ctx) error {
 	}
 	if s.dsm != nil {
 		s.dsm.UpdateDeviceConfig(dev.ID, dev.Storage)
+	}
+	// 触发点位元数据同步到 edgeOS
+	if s.nbm != nil {
+		s.nbm.PublishPointsMetadata()
 	}
 	return c.JSON(dev)
 }
@@ -1316,4 +1364,174 @@ func (s *Server) stopRandomWrite(c *fiber.Ctx) error {
 	}
 	s.randomWriteRunning = false
 	return c.JSON(fiber.Map{"status": "stopping"})
+}
+
+// edgeOS(MQTT) 处理函数
+func (s *Server) getEdgeOSMQTTStats(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	id := c.Params("id")
+	stats, err := s.nbm.GetEdgeOSMQTTStats(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(stats)
+}
+
+func (s *Server) updateEdgeOSMQTTConfig(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	var cfg model.EdgeOSMQTTConfig
+	if err := c.BodyParser(&cfg); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if cfg.ID == "" {
+		cfg.ID = uuid.New().String()
+	}
+
+	if err := s.nbm.UpsertEdgeOSMQTTConfig(cfg); err != nil {
+		zap.L().Error("Failed to update edgeOS(MQTT) config",
+			zap.Error(err),
+			zap.String("id", cfg.ID),
+		)
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	zap.L().Info("edgeOS(MQTT) config updated",
+		zap.String("id", cfg.ID),
+		zap.String("name", cfg.Name),
+	)
+
+	return c.JSON(fiber.Map{"success": true, "config": cfg})
+}
+
+func (s *Server) deleteEdgeOSMQTTConfig(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	id := c.Params("id")
+	if err := s.nbm.DeleteEdgeOSMQTTConfig(id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	zap.L().Info("edgeOS(MQTT) config deleted",
+		zap.String("id", id),
+	)
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (s *Server) publishEdgeOSMQTT(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	type PublishRequest struct {
+		ClientID string `json:"client_id"`
+		Topic    string `json:"topic"`
+		Payload  []byte `json:"payload"`
+	}
+
+	var req PublishRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := s.nbm.PublishEdgeOSMQTT(req.ClientID, req.Topic, req.Payload); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
+// edgeOS(NATS) 处理函数
+func (s *Server) getEdgeOSNATSStats(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	id := c.Params("id")
+	stats, err := s.nbm.GetEdgeOSNATSStats(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(stats)
+}
+
+func (s *Server) updateEdgeOSNATSConfig(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	var cfg model.EdgeOSNATSConfig
+	if err := c.BodyParser(&cfg); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if cfg.ID == "" {
+		cfg.ID = uuid.New().String()
+	}
+
+	if err := s.nbm.UpsertEdgeOSNATSConfig(cfg); err != nil {
+		zap.L().Error("Failed to update edgeOS(NATS) config",
+			zap.Error(err),
+			zap.String("id", cfg.ID),
+		)
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	zap.L().Info("edgeOS(NATS) config updated",
+		zap.String("id", cfg.ID),
+		zap.String("name", cfg.Name),
+	)
+
+	return c.JSON(fiber.Map{"success": true, "config": cfg})
+}
+
+func (s *Server) deleteEdgeOSNATSConfig(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	id := c.Params("id")
+	if err := s.nbm.DeleteEdgeOSNATSConfig(id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	zap.L().Info("edgeOS(NATS) config deleted",
+		zap.String("id", id),
+	)
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (s *Server) publishEdgeOSNATS(c *fiber.Ctx) error {
+	if s.nbm == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Northbound manager not initialized"})
+	}
+
+	type PublishRequest struct {
+		ClientID string `json:"client_id"`
+		Subject  string `json:"subject"`
+		Payload  []byte `json:"payload"`
+	}
+
+	var req PublishRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := s.nbm.PublishEdgeOSNATS(req.ClientID, req.Subject, req.Payload); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"success": true})
 }

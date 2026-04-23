@@ -153,7 +153,7 @@ func main() {
 			port = cfg.Server.Port
 		}
 		addr := ":" + strconv.Itoa(port)
-		zap.L().Info("Web server starting", zap.String("addr", addr))
+		//zap.L().Info("Web server starting", zap.String("addr", addr))
 		if err := srv.Start(addr); err != nil {
 			zap.L().Fatal("Web server failed", zap.Error(err))
 		}

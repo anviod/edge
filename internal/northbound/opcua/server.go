@@ -365,7 +365,7 @@ func (s *Server) buildAddressSpace() error {
 	nsURI := "http://edgex-gateway.com/opcua"
 	// Get namespace index from the server
 	nsIndex := s.srv.NamespaceManager().Add(nsURI)
-	zap.L().Info("OPC UA Namespace Added", zap.String("uri", nsURI), zap.Uint16("index", nsIndex))
+	//zap.L().Info("OPC UA Namespace Added", zap.String("uri", nsURI), zap.Uint16("index", nsIndex))
 
 	createFolder := func(parentID ua.NodeID, id string, name string) ua.NodeID {
 		nodeID := ua.ParseNodeID(fmt.Sprintf("ns=%d;s=%s", nsIndex, id))
@@ -444,12 +444,12 @@ func (s *Server) buildAddressSpace() error {
 	channelsID := createFolder(gatewayID, "Gateway/Channels", "Channels")
 
 	channels := s.sb.GetChannels()
-	zap.L().Info("Building OPC UA Address Space", zap.Int("channel_count", len(channels)))
+	//zap.L().Info("Building OPC UA Address Space", zap.Int("channel_count", len(channels)))
 
 	for _, ch := range channels {
 		chNodeIDStr := fmt.Sprintf("Gateway/Channels/%s", ch.ID)
 		// Use ID as BrowseName to ensure consistency with user request
-		zap.L().Info("Adding OPC UA Channel Node", zap.String("channel_id", ch.ID), zap.String("channel_name", ch.Name), zap.Int("device_count", len(ch.Devices)))
+		//zap.L().Info("Adding OPC UA Channel Node", zap.String("channel_id", ch.ID), zap.String("channel_name", ch.Name), zap.Int("device_count", len(ch.Devices)))
 		chNodeID := createFolder(channelsID, chNodeIDStr, ch.ID)
 
 		createVar(chNodeID, chNodeIDStr+"/Protocol", "Protocol", ch.Protocol, s.getDataTypeID("string"), 1, nil)
@@ -458,27 +458,27 @@ func (s *Server) buildAddressSpace() error {
 		devsNodeIDStr := chNodeIDStr + "/Devices"
 		devsNodeID := createFolder(chNodeID, devsNodeIDStr, "Devices")
 
-		zap.L().Info("Processing Devices for Channel", zap.String("channel_id", ch.ID), zap.Int("device_count", len(ch.Devices)))
+		//zap.L().Info("Processing Devices for Channel", zap.String("channel_id", ch.ID), zap.Int("device_count", len(ch.Devices)))
 
 		for _, dev := range ch.Devices {
-			zap.L().Info("Processing Device", zap.String("device_id", dev.ID), zap.String("device_name", dev.Name), zap.Int("point_count", len(dev.Points)))
+			//zap.L().Info("Processing Device", zap.String("device_id", dev.ID), zap.String("device_name", dev.Name), zap.Int("point_count", len(dev.Points)))
 
 			// Check if device is enabled in config
 			// If config.Devices is empty, we assume "Allow All" for better UX.
 			// If config.Devices is populated, we apply strict filtering.
 			if s.config.Devices != nil && len(s.config.Devices) > 0 {
 				if enabled, ok := s.config.Devices[dev.ID]; !ok || !enabled {
-					zap.L().Info("Skipping OPC UA Device Node (Not Enabled)", zap.String("device_id", dev.ID), zap.Bool("ok", ok), zap.Bool("enabled", enabled))
+//					zap.L().Info("Skipping OPC UA Device Node (Not Enabled)", zap.String("device_id", dev.ID), zap.Bool("ok", ok), zap.Bool("enabled", enabled))
 					continue
 				} else {
-					zap.L().Info("Device Enabled in OPC UA Config", zap.String("device_id", dev.ID), zap.Bool("enabled", enabled))
+					//zap.L().Info("Device Enabled in OPC UA Config", zap.String("device_id", dev.ID), zap.Bool("enabled", enabled))
 				}
 			} else {
 				zap.L().Info("No OPC UA Device Filter Configured, Allowing All Devices")
 			}
 
 			dNodeIDStr := devsNodeIDStr + "/" + dev.ID
-			zap.L().Info("Adding OPC UA Device Node", zap.String("device_id", dev.ID), zap.String("device_name", dev.Name))
+//			zap.L().Info("Adding OPC UA Device Node", zap.String("device_id", dev.ID), zap.String("device_name", dev.Name))
 			// Use ID as BrowseName
 			dNodeID := createFolder(devsNodeID, dNodeIDStr, dev.ID)
 
@@ -488,7 +488,7 @@ func (s *Server) buildAddressSpace() error {
 			pointsNodeIDStr := dNodeIDStr + "/Points"
 			pointsNodeID := createFolder(dNodeID, pointsNodeIDStr, "Points")
 
-			zap.L().Info("Adding OPC UA Points for Device", zap.String("device_id", dev.ID), zap.Int("point_count", len(dev.Points)))
+//			zap.L().Info("Adding OPC UA Points for Device", zap.String("device_id", dev.ID), zap.Int("point_count", len(dev.Points)))
 
 			for _, p := range dev.Points {
 				pKey := fmt.Sprintf("%s/%s/%s", ch.ID, dev.ID, p.ID)
@@ -566,7 +566,7 @@ func (s *Server) buildAddressSpace() error {
 				s.mu.Lock()
 				s.nodeMap[pKey] = vNode
 				s.mu.Unlock()
-				zap.L().Info("Added OPC UA Point Node", zap.String("point_id", p.ID), zap.String("point_name", p.Name), zap.String("data_type", p.DataType))
+//				zap.L().Info("Added OPC UA Point Node", zap.String("point_id", p.ID), zap.String("point_name", p.Name), zap.String("data_type", p.DataType))
 			}
 		}
 	}

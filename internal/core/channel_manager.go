@@ -203,7 +203,7 @@ func (cm *ChannelManager) AddChannel(ch *model.Channel) error {
 		}
 	}
 
-	zap.L().Info("Channel added", zap.String("channel", ch.Name), zap.String("protocol", ch.Protocol), zap.Int("device_count", len(ch.Devices)))
+//	zap.L().Info("Channel added", zap.String("channel", ch.Name), zap.String("protocol", ch.Protocol), zap.Int("device_count", len(ch.Devices)))
 	return nil
 }
 
@@ -316,7 +316,7 @@ func (cm *ChannelManager) StartChannel(channelID string) error {
 		zap.L().Error("Failed to connect driver for channel", zap.String("channel", ch.Name), zap.Error(err))
 		return err
 	}
-	zap.L().Info("Driver connected for channel", zap.String("channel", ch.Name))
+	//zap.L().Info("Driver connected for channel", zap.String("channel", ch.Name))
 
 	// 为该通道下的每个设备启动采集循环
 	for i := range ch.Devices {
@@ -342,7 +342,7 @@ func (cm *ChannelManager) StartChannel(channelID string) error {
 		go cm.deviceLoop(&devCopy, d, ch)
 	}
 
-	zap.L().Info("Channel started", zap.String("channel", ch.Name), zap.Int("device_count", len(ch.Devices)))
+	//zap.L().Info("Channel started", zap.String("channel", ch.Name), zap.Int("device_count", len(ch.Devices)))
 	return nil
 }
 
@@ -870,17 +870,17 @@ func (cm *ChannelManager) validateEtherNetIPPoint(point *model.Point) error {
 
 // collectDevice 从设备采集数据
 func (cm *ChannelManager) collectDevice(dev *model.Device, d drv.Driver, ch *model.Channel, node *DeviceNodeTemplate) {
-	start := time.Now()
+	//start := time.Now()
 	defer func() {
-		duration := time.Since(start)
-		zap.L().Info("Device collection cycle finished",
-			zap.String("device", dev.Name),
-			zap.Int("point_count", len(dev.Points)),
-			zap.String("duration", fmt.Sprintf("%.3fs", duration.Seconds())),
-		)
+		//duration := time.Since(start)
+		// zap.L().Info("Device collection cycle finished",
+		// 	zap.String("device", dev.Name),
+		// 	zap.Int("point_count", len(dev.Points)),
+		// 	zap.String("duration", fmt.Sprintf("%.3fs", duration.Seconds())),
+		// )
 	}()
 
-	zap.L().Info("PollStart", zap.String("device", dev.Name), zap.Time("ts", time.Now()))
+	//zap.L().Info("PollStart", zap.String("device", dev.Name), zap.Time("ts", time.Now()))
 
 	// 获取设备适配器
 	adapter := cm.deviceAdapterManager.GetAdapter(dev.ID)

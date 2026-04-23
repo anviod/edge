@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="edge-compute-metrics-container">
     <a-row :gutter="[16, 16]" class="metrics-row">
       <a-col :span="12" :md="4" class="metrics-col">
@@ -161,7 +161,7 @@ onUnmounted(() => {
 
 .metrics-card {
   border: 1px solid #e5e7eb;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 16px;
   height: 100%;
   background: #ffffff;
@@ -267,3 +267,4 @@ onUnmounted(() => {
   padding: 16px;
 }
 </style>
+

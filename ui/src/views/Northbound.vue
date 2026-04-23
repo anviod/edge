@@ -33,6 +33,7 @@
         <NorthboundHttp
           :items="config.http"
           @settings="openHttpSettings"
+          @stats="openHttpStats"
           @delete="deleteProtocol"
         />
       </div>
@@ -50,6 +51,27 @@
           :items="config.sparkplug_b"
           :connection-status="config.status"
           @settings="openSparkplugBSettings"
+          @stats="openSparkplugStats"
+          @delete="deleteProtocol"
+        />
+      </div>
+      <div v-if="config.edgeos_mqtt && config.edgeos_mqtt.length > 0" class="channel-item">
+        <NorthboundEdgeOSMqtt
+          :items="config.edgeos_mqtt"
+          :connection-status="config.status"
+          @help="openEdgeOSHelp"
+          @settings="openEdgeOSMQTTSettings"
+          @stats="openEdgeOSMQTTStats"
+          @delete="deleteProtocol"
+        />
+      </div>
+      <div v-if="config.edgeos_nats && config.edgeos_nats.length > 0" class="channel-item">
+        <NorthboundEdgeOSNats
+          :items="config.edgeos_nats"
+          :connection-status="config.status"
+          @help="openEdgeOSHelp"
+          @settings="openEdgeOSNATSSettings"
+          @stats="openEdgeOSNATSStats"
           @delete="deleteProtocol"
         />
       </div>
@@ -77,39 +99,63 @@
             <template #avatar><icon-storage :size="24" style="color: #722ed1" /></template>
           </a-list-item-meta>
         </a-list-item>
+        <a-list-item @click="addProtocol('edgeos_mqtt')" style="cursor: pointer">
+          <a-list-item-meta title="edgeOS(MQTT)" description="MQTT 3.1.1 协议，双向通信，节点注册与心跳">
+            <template #avatar><icon-thunderbolt :size="24" style="color: #f53f3f" /></template>
+          </a-list-item-meta>
+        </a-list-item>
+        <a-list-item @click="addProtocol('edgeos_nats')" style="cursor: pointer">
+          <a-list-item-meta title="edgeOS(NATS)" description="NATS 2.x 协议，JetStream 持久化，高性能">
+            <template #avatar><icon-thunderbolt :size="24" style="color: #ff7d00" /></template>
+          </a-list-item-meta>
+        </a-list-item>
       </a-list>
     </a-modal>
 
     <MqttSettingsDialog
-      v-model="mqttDialogVisible"
+      v-model:visible="mqttDialogVisible"
       :config="mqttEditConfig"
       :all-devices="allDevices"
       @saved="fetchConfig"
     />
 
     <HttpSettingsDialog
-      v-model="httpDialogVisible"
+      v-model:visible="httpDialogVisible"
       :config="httpEditConfig"
       :all-devices="allDevices"
       @saved="fetchConfig"
     />
 
     <OpcuaSettingsDialog
-      v-model="opcuaDialogVisible"
+      v-model:visible="opcuaDialogVisible"
       :config="opcuaEditConfig"
       :all-devices="allDevices"
       @saved="fetchConfig"
     />
 
     <SparkplugSettingsDialog
-      v-model="sparkplugDialogVisible"
+      v-model:visible="sparkplugDialogVisible"
       :config="sparkplugEditConfig"
       :all-devices="allDevices"
       @saved="fetchConfig"
     />
 
+    <EdgeOSMQTTSettingsDialog
+      v-model:visible="edgeosMQTTDialogVisible"
+      :config="edgeosMQTTEditConfig"
+      :all-devices="allDevices"
+      @saved="fetchConfig"
+    />
+
+    <EdgeOSNATSSettingsDialog
+      v-model:visible="edgeosNATSDialogVisible"
+      :config="edgeosNATSEditConfig"
+      :all-devices="allDevices"
+      @saved="fetchConfig"
+    />
+
     <MqttHelpDialog
-      v-model="mqttHelpVisible"
+      v-model:visible="mqttHelpVisible"
       :topic="mqttHelpData.topic"
       :subscribe_topic="mqttHelpData.subscribe_topic"
       :write_response_topic="mqttHelpData.write_response_topic"
@@ -119,28 +165,54 @@
     />
 
     <OpcuaHelpDialog
-      v-model="opcuaHelpVisible"
+      v-model:visible="opcuaHelpVisible"
       :port="opcuaHelpData.port"
       :endpoint="opcuaHelpData.endpoint"
     />
 
+    <EdgeOSHelpDialog v-model:visible="edgeosHelpVisible" />
+
     <StatsDialog
-      v-model="mqttStatsVisible"
+      v-model:visible="mqttStatsVisible"
       type="mqtt"
       :item-id="mqttStatsId"
     />
 
     <StatsDialog
-      v-model="opcuaStatsVisible"
+      v-model:visible="httpStatsVisible"
+      type="http"
+      :item-id="httpStatsId"
+    />
+
+    <StatsDialog
+      v-model:visible="opcuaStatsVisible"
       type="opcua"
       :item-id="opcuaStatsId"
+    />
+
+    <StatsDialog
+      v-model:visible="sparkplugStatsVisible"
+      type="sparkplug_b"
+      :item-id="sparkplugStatsId"
+    />
+
+    <StatsDialog
+      v-model:visible="edgeosMQTTStatsVisible"
+      type="edgeos-mqtt"
+      :item-id="edgeosMQTTStatsId"
+    />
+
+    <StatsDialog
+      v-model:visible="edgeosNATSStatsVisible"
+      type="edgeos-nats"
+      :item-id="edgeosNATSStatsId"
     />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { IconPlus, IconCloud, IconUpload, IconSwap, IconStorage } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconCloud, IconUpload, IconSwap, IconStorage, IconThunderbolt } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 import request from '@/utils/request'
 
@@ -148,16 +220,21 @@ import NorthboundMqtt from '@/components/northbound/NorthboundMqtt.vue'
 import NorthboundHttp from '@/components/northbound/NorthboundHttp.vue'
 import NorthboundOpcua from '@/components/northbound/NorthboundOpcua.vue'
 import NorthboundSparkplug from '@/components/northbound/NorthboundSparkplug.vue'
+import NorthboundEdgeOSMqtt from '@/components/northbound/NorthboundEdgeOSMqtt.vue'
+import NorthboundEdgeOSNats from '@/components/northbound/NorthboundEdgeOSNats.vue'
 import MqttSettingsDialog from '@/components/northbound/MqttSettingsDialog.vue'
 import HttpSettingsDialog from '@/components/northbound/HttpSettingsDialog.vue'
 import OpcuaSettingsDialog from '@/components/northbound/OpcuaSettingsDialog.vue'
 import SparkplugSettingsDialog from '@/components/northbound/SparkplugSettingsDialog.vue'
+import EdgeOSMQTTSettingsDialog from '@/components/northbound/EdgeOSMQTTSettingsDialog.vue'
+import EdgeOSNATSSettingsDialog from '@/components/northbound/EdgeOSNATSSettingsDialog.vue'
 import MqttHelpDialog from '@/components/northbound/MqttHelpDialog.vue'
 import OpcuaHelpDialog from '@/components/northbound/OpcuaHelpDialog.vue'
+import EdgeOSHelpDialog from '@/components/northbound/EdgeOSHelpDialog.vue'
 import StatsDialog from '@/components/northbound/StatsDialog.vue'
 
 const loading = ref(false)
-const config = ref({ mqtt: [], http: [], opcua: [], sparkplug_b: [], status: {} })
+const config = ref({ mqtt: [], http: [], opcua: [], sparkplug_b: [], edgeos_mqtt: [], edgeos_nats: [], status: {} })
 const allDevices = ref([])
 
 const hasNoChannels = computed(() => {
@@ -165,7 +242,9 @@ const hasNoChannels = computed(() => {
   return (!c.mqtt || c.mqtt.length === 0) &&
     (!c.http || c.http.length === 0) &&
     (!c.opcua || c.opcua.length === 0) &&
-    (!c.sparkplug_b || c.sparkplug_b.length === 0)
+    (!c.sparkplug_b || c.sparkplug_b.length === 0) &&
+    (!c.edgeos_mqtt || c.edgeos_mqtt.length === 0) &&
+    (!c.edgeos_nats || c.edgeos_nats.length === 0)
 })
 
 const addDialogVisible = ref(false)
@@ -174,11 +253,15 @@ const mqttDialogVisible = ref(false)
 const httpDialogVisible = ref(false)
 const opcuaDialogVisible = ref(false)
 const sparkplugDialogVisible = ref(false)
+const edgeosMQTTDialogVisible = ref(false)
+const edgeosNATSDialogVisible = ref(false)
 
 const mqttEditConfig = ref(null)
 const httpEditConfig = ref(null)
 const opcuaEditConfig = ref(null)
 const sparkplugEditConfig = ref(null)
+const edgeosMQTTEditConfig = ref(null)
+const edgeosNATSEditConfig = ref(null)
 
 const mqttHelpVisible = ref(false)
 const mqttHelpData = ref({ topic: '', subscribe_topic: '', write_response_topic: '', status_topic: '', online_payload: '', offline_payload: '' })
@@ -186,11 +269,25 @@ const mqttHelpData = ref({ topic: '', subscribe_topic: '', write_response_topic:
 const opcuaHelpVisible = ref(false)
 const opcuaHelpData = ref({ port: 4840, endpoint: '' })
 
+const edgeosHelpVisible = ref(false)
+
 const mqttStatsVisible = ref(false)
 const mqttStatsId = ref('')
 
+const httpStatsVisible = ref(false)
+const httpStatsId = ref('')
+
 const opcuaStatsVisible = ref(false)
 const opcuaStatsId = ref('')
+
+const sparkplugStatsVisible = ref(false)
+const sparkplugStatsId = ref('')
+
+const edgeosMQTTStatsVisible = ref(false)
+const edgeosMQTTStatsId = ref('')
+
+const edgeosNATSStatsVisible = ref(false)
+const edgeosNATSStatsId = ref('')
 
 const fetchConfig = async () => {
   loading.value = true
@@ -201,6 +298,8 @@ const fetchConfig = async () => {
       http: data.http || [],
       opcua: data.opcua || [],
       sparkplug_b: data.sparkplug_b || [],
+      edgeos_mqtt: data.edgeos_mqtt || [],
+      edgeos_nats: data.edgeos_nats || [],
       status: data.status || {}
     }
   } catch (e) {
@@ -230,6 +329,8 @@ const addProtocol = (type) => {
   else if (type === 'http') openHttpSettings(null)
   else if (type === 'sparkplug_b') openSparkplugBSettings(null)
   else if (type === 'opcua') openOpcuaSettings(null)
+  else if (type === 'edgeos_mqtt') openEdgeOSMQTTSettings(null)
+  else if (type === 'edgeos_nats') openEdgeOSNATSSettings(null)
 }
 
 const openMqttSettings = async (item) => {
@@ -256,6 +357,18 @@ const openSparkplugBSettings = async (item) => {
   sparkplugDialogVisible.value = true
 }
 
+const openEdgeOSMQTTSettings = async (item) => {
+  await fetchAllDevices()
+  edgeosMQTTEditConfig.value = item ? JSON.parse(JSON.stringify(item)) : null
+  edgeosMQTTDialogVisible.value = true
+}
+
+const openEdgeOSNATSSettings = async (item) => {
+  await fetchAllDevices()
+  edgeosNATSEditConfig.value = item ? JSON.parse(JSON.stringify(item)) : null
+  edgeosNATSDialogVisible.value = true
+}
+
 const openMqttHelp = (item) => {
   mqttHelpData.value = {
     topic: item.topic || '',
@@ -273,14 +386,38 @@ const openOpcuaHelp = (item) => {
   opcuaHelpVisible.value = true
 }
 
+const openEdgeOSHelp = () => {
+  edgeosHelpVisible.value = true
+}
+
 const openMqttStats = (item) => {
   mqttStatsId.value = item.id
   mqttStatsVisible.value = true
 }
 
+const openHttpStats = (item) => {
+  httpStatsId.value = item.id
+  httpStatsVisible.value = true
+}
+
 const openOpcuaStats = (item) => {
   opcuaStatsId.value = item.id
   opcuaStatsVisible.value = true
+}
+
+const openSparkplugStats = (item) => {
+  sparkplugStatsId.value = item.id
+  sparkplugStatsVisible.value = true
+}
+
+const openEdgeOSMQTTStats = (item) => {
+  edgeosMQTTStatsId.value = item.id
+  edgeosMQTTStatsVisible.value = true
+}
+
+const openEdgeOSNATSStats = (item) => {
+  edgeosNATSStatsId.value = item.id
+  edgeosNATSStatsVisible.value = true
 }
 
 const deleteProtocol = async (type, id) => {
@@ -329,3 +466,4 @@ onMounted(fetchConfig)
   max-width: 100%;
 }
 </style>
+

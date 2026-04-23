@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-modal v-model:visible="visible" title="OPC UA 接入文档" :width="900" :footer="false" unmount-on-close>
     <a-tabs v-model:active-key="activeTab" type="line">
       <a-tab-pane key="connection" title="连接配置">
@@ -34,7 +34,7 @@
             <div style="margin-bottom: 8px">
               <a href="https://downloads.prosysopc.com/opc-ua-browser-downloads.php" target="_blank">下载地址 (Download)</a>
             </div>
-            <div style="background: #f8fafc; padding: 8px; border-radius: 2px">
+            <div style="background: #f8fafc; padding: 8px; border-radius: 0">
               <strong>连接步骤：</strong>
               <ol style="margin: 4px 0 0; padding-left: 20px">
                 <li>输入 Endpoint URL (上文复制)。</li>
@@ -46,7 +46,7 @@
           </a-collapse-item>
           <a-collapse-item header="Unified Automation UaExpert" key="uaexpert">
             <p style="margin: 0 0 8px">专业的 OPC UA 客户端。</p>
-            <div style="background: #f8fafc; padding: 8px; border-radius: 2px">
+            <div style="background: #f8fafc; padding: 8px; border-radius: 0">
               <strong>连接步骤：</strong>
               <ol style="margin: 4px 0 0; padding-left: 20px">
                 <li>添加 Server，双击 Custom Discovery 下的 URL。</li>
@@ -85,7 +85,7 @@
         </div>
 
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px">地址空间结构</div>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px">Root
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 0; font-size: 13px; line-height: 1.5; border: 1px solid #e5e7eb; margin-bottom: 16px">Root
 └── Objects
     └── DeviceName (设备名称)
         └── PointName (点位名称)</pre>
@@ -107,28 +107,28 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { IconCopy } from '@arco-design/web-vue/es/icon'
 import { showMessage } from '@/composables/useGlobalState'
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
+  visible: { type: Boolean, default: false },
   port: { type: Number, default: 4840 },
   endpoint: { type: String, default: '' }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:visible'])
 
-const visible = ref(false)
+const visible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
 const activeTab = ref('connection')
 const host = ref('localhost')
 
 onMounted(() => {
   host.value = window.location.host ? window.location.host.split(':')[0] : 'localhost'
 })
-
-watch(() => props.modelValue, (val) => { visible.value = val })
-watch(visible, (val) => { emit('update:modelValue', val) })
 
 const securityColumns = [
   { title: '策略', dataIndex: 'policy' },
@@ -161,3 +161,4 @@ const copyToClipboard = (text) => {
   })
 }
 </script>
+
