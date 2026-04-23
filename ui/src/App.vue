@@ -804,7 +804,7 @@ body {
     top: 0;
     left: 0;
     height: 100vh;
-    width: 240px;
+    width: 144px;
     background: white;
     border-right: 1px solid #e2e8f0;
     display: flex;
@@ -982,14 +982,14 @@ body {
     position: fixed;
     top: 0;
     right: 0;
-    left: 240px;
+    left: 144px;
     height: 56px;
     background: rgba(255, 255, 255, 0.98);
     border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 20px 0 0;
     z-index: 99;
     transition: left 0.2s ease;
     outline: none;
@@ -1171,7 +1171,7 @@ body {
 }
 
 .main-content.has-sidebar {
-    margin-left: 240px;
+    margin-left: 144px;
 }
 
 .main-content.has-sidebar.is-collapsed {
