@@ -30,7 +30,7 @@ description: EdgeX 项目的完整文档
             </div>
             <div class="metric-card">
               <strong>20260409</strong>
-              <span>首页信息更新时间</span>
+              <span>信息更新时间</span>
             </div>
           </div>
         </div>
