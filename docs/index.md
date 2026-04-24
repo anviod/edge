@@ -10,7 +10,7 @@ description: EdgeX 项目的完整文档
         <div class="hero-copy">
           <div class="eyebrow">Industrial Edge Documentation</div>
           <h1>EdgeX 文档。</h1>
-          <p>把 API、部署、驱动、边缘计算和运维资料集中在一个真正可浏览的 Landing Page 里。首页负责“快速进入”，文档页负责“专注阅读”，两种页面采用不同宽度策略。</p>
+          <p> 🎯 轻量级的工业边缘计算网关，旨在连接工业现场设备（南向）与云端/上层应用（北向），并提供本地边缘计算能力。</p>
           <div class="hero-actions">
             <a class="button-link button-link--primary" href="API/API_Index_CN.html">查看 API 文档</a>
             <a class="button-link button-link--secondary" href="man/USER_MANUAL.html">打开用户手册</a>
