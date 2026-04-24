@@ -1,6 +1,9 @@
+---
+
 layout: landing
 title: EdgeX 项目文档
 description: EdgeX 项目的完整文档
+
 ---
 
 <section class="hero-section">
