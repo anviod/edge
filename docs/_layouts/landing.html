@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: 'zh-CN' }}">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page.title %}{{ page.title }} | {{ site.name }}{% else %}{{ site.name }}{% endif %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+    {% seo %}
+  </head>
+  <body class="page-home">
+    <header class="site-header site-header--home">
+      <div class="shell shell--wide">
+        <div class="site-header__topbar">
+          <a class="site-brand" href="{{ '/' | relative_url }}">{{ site.name | default: 'EdgeX 文档' }}</a>
+          <nav class="site-nav" aria-label="主导航">
+            {% for item in site.nav %}
+              <a href="{{ item.url | relative_url }}">{{ item.title }}</a>
+            {% endfor %}
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main class="landing-main">
+      {{ content }}
+    </main>
+
+    <script src="{{ '/assets/script.js' | relative_url }}"></script>
+  </body>
+</html>
