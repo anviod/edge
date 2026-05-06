@@ -1,6 +1,6 @@
 # Industrial Edge Gateway
 
-[中文文档](./README_CN.md)
+[中文文档](https://anviod.github.io/edgex/)
 
 Industrial Edge Gateway is a lightweight industrial edge computing gateway designed to connect industrial field devices (Southbound) with cloud/upper-layer applications (Northbound) and provide local edge computing capabilities. The project uses Go for the backend and Vue 3 for the frontend management interface.
 
