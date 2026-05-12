@@ -62,7 +62,7 @@ Single-file deployment, zero dependencies, multi-architecture support, suitable 
 | **Modbus TCP / RTU / RTU Over TCP** | ✅ Implemented | Full support, based on `simonvetter/modbus`; **Smart Collection Optimization**: Supports auto-detecting slave MTU (max registers), exponential backoff reconnection, and fully automatic local port detection. **Enhanced Decoder**: Supports conversion and automatic scaling for multiple integer types like `int32`/`uint32`/`int16`/`uint16`. **Robustness**: Automatically identifies Illegal Data Addresses (Exception 2) and enters a 24-hour cooldown period to prevent invalid scans from slowing down collection efficiency |
 | **BACnet IP** | ✅ Implemented | Supports device discovery (Who-Is/I-Am), multi-interface broadcast + unicast fallback (respects I-Am source port), object scanning and point read/write, automatic fallback to single read upon batch read failure, fallback to 47808 on abnormal ports, read timeout and automatic recovery optimization. **New Local Simulator Support**: Automatically attempts localhost unicast discovery for simulators running locally on Windows. |
 | **OPC UA Client** | ✅ Implemented | Based on `gopcua/opcua`, supports read/write operations, Subscription and Monitoring, supports automatic reconnection on disconnection |
-| **Siemens S7** | 🚧 In Development | Supports S7-200Smart/1200/1500 etc. (Custom Development) |
+| **Siemens S7** | ✅ Implemented | Full support for S7-200Smart/1200/1500 series PLCs; **Communication Modes**: Supports both S7 Protocol (ISO-on-TCP/RFC1006) and optimized fetch/write operations; **Memory Areas**: Supports DB (Data Block), Input/Output (I/Q), Memory Bits (M), Timers (T), Counters (C); **Data Types**: Supports bit, byte, word, dword, int, dint, real, and string operations; **Robustness**: Automatic connection pooling, retry mechanism, and connection health monitoring |
 | **EtherNet/IP (ODVA)** | 🚧 In Development | Planned implementation |
 | **Mitsubishi MELSEC (SLMP)** | 🚧 In Development | Planned implementation |
 | **Omron FINS (TCP/UDP)** | 🚧 In Development | Planned implementation |
@@ -292,7 +292,7 @@ devices:
 
 ### Core Driver Completion
 - [x] **OPC UA Client**: Implement real read/write via `gopcua/opcua`.
-- [ ] **Siemens S7**: Implement real TCP communication for S7 protocol.
+- [x] **Siemens S7**: Implement real TCP communication for S7 protocol.
 - [ ] **EtherNet/IP**: Implement CIP/EIP protocol stack.
 - [ ] **Other Drivers**: Gradually replace development implementation for Mitsubishi, Omron, DL/T645.
 
