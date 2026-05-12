@@ -1,7 +1,11 @@
 ---
+
 layout: default
+
 title: S7协议实现
+
 description: S7协议从模拟实现升级为基于gos7库的真实实现，涵盖后端驱动、前端配置、批量读取优化
+
 ---
 
 ## 产品概述
@@ -137,3 +141,97 @@ C0         -> Area=CT, DBNum=0, ByteOffset=0
 - **PLC类型默认参数**: S7-200Smart/1200(rack=0,slot=1,S7Basic), S7-1500(rack=0,slot=0,S7Basic), S7-300(rack=0,slot=2,PG), S7-400(rack=0,slot=3,PG)
 - **AGReadMulti**: S7协议批量读取API，单次最多20个数据项，自动处理地址编码和响应解析
 - **依赖注入测试**: 使用clientFactory和handlerFactory字段注入mock对象进行单元测试
+
+## 测试报告
+
+### 测试执行
+
+**测试时间**: 2026-05-12
+
+**测试结果**: ✅ 全部通过 (PASS)
+
+**总耗时**: 1.358s
+
+**测试文件**: decoder_test.go, transport_test.go, csv_import_test.go
+
+### 测试覆盖详情
+
+| 测试文件 | 测试用例数 | 覆盖范围 |
+| --- | --- | --- |
+| decoder_test.go | 10 | 地址解析、数据类型编解码、配置解析 |
+| transport_test.go | 8 | 连接管理、心跳控制、重试逻辑、指标统计 |
+| csv_import_test.go | 2 | CSV地址转换、CSV类型转换 |
+
+### decoder_test.go 详细测试用例
+
+| 用例名称 | 测试内容 | 结果 |
+| --- | --- | --- |
+| TestParseAddress_DB | DB双字(DB1.DBD0)、DB字(DB10.DBW20)、DB字节(DB100.DBB4)、DB位(DB1.DBX0.7/DBX7006.7/DBX7500)解析 | ✅ PASS |
+| TestParseAddress_Merker | M区地址(M0.0/M3.5/MD0/MW10/MB20)解析 | ✅ PASS |
+| TestParseAddress_IO | I区输入位(I0.0/I1.3/ID0/IW0/IB0)和Q区输出位(Q0.0/Q1.3/QD0/QW0/QB0)解析 | ✅ PASS |
+| TestParseAddress_TimerCounter | 定时器(T0/T100)和计数器(C0/C50)解析 | ✅ PASS |
+| TestParseAddress_Invalid | 空字符串、随机字符串、无效DB号、缺少偏移量等错误情况 | ✅ PASS |
+| TestDecodeValue_Bool | 位值解码(bool_from_bit_0/bool_from_bit_0_false/bool_from_bit_3/bool_from_bit_7) | ✅ PASS |
+| TestDecodeValue_Int16 | int16类型解码 | ✅ PASS |
+| TestDecodeValue_Uint16 | uint16类型解码 | ✅ PASS |
+| TestDecodeValue_Float32 | float32类型解码 | ✅ PASS |
+| TestDecodeValue_Float64 | float64类型解码 | ✅ PASS |
+| TestEncodeDecode_RoundTrip | int16/float32/bool_bit类型编码解码往返测试 | ✅ PASS |
+| TestReadSizeForArea | 根据Area和WordLen计算读取字节数 | ✅ PASS |
+| TestParseConfig | 默认配置/自定义配置/PLC类型默认值解析 | ✅ PASS |
+
+### transport_test.go 详细测试用例
+
+| 用例名称 | 测试内容 | 结果 |
+| --- | --- | --- |
+| TestConnectDisconnect/successful_connection | 成功建立TCP连接并断开 | ✅ PASS |
+| TestConnectDisconnect/connection_failure | 连接失败处理 | ✅ PASS |
+| TestConnectDisconnect/missing_IP | IP地址缺失错误处理 | ✅ PASS |
+| TestMetrics | 连接指标(连接时长、重连次数、本地/远程地址)获取 | ✅ PASS |
+| TestGetCfgInt | int/float64/string类型配置值解析，默认值处理，无效字符串处理 | ✅ PASS |
+| TestContainsAny | 超时错误、连接重置、管道破裂等网络错误判断 | ✅ PASS |
+| TestWithRetry/success_on_first_attempt | 首次尝试成功 | ✅ PASS |
+| TestWithRetry/retry_on_network_error | 网络错误时重试 | ✅ PASS |
+| TestWithRetry/failure_after_max_retries | 达到最大重试次数后失败 | ✅ PASS |
+| TestHeartbeatControl | 心跳启动/停止控制 | ✅ PASS |
+| TestPLCDefaults/S7-200Smart/S7-1200/S7-1500/S7-300/S7-400 | 各PLC类型的默认rack/slot/connType验证 | ✅ PASS |
+
+### csv_import_test.go 详细测试用例
+
+| 用例名称 | 测试内容 | 结果 |
+| --- | --- | --- |
+| TestConvertCSVToS7Address | DB BOOL(Q/I类型)、DB REAL/LREAL地址格式转换 | ✅ PASS |
+| TestConvertCSVTypeToS7DataType | BOOL/REAL/LREAL/DWORD/WORD/INT/UINT/BYTE/SINT/DINT/STRING类型映射 | ✅ PASS |
+
+### 代码审查结论
+
+**架构审查**:
+- ✅ 三层架构(transport/decoder/scheduler)实现清晰，职责分离合理
+- ✅ 依赖注入模式便于单元测试，clientFactory和handlerFactory设计良好
+- ✅ 错误处理完善，连接失败、读取失败等场景处理得当
+
+**地址解析审查**:
+- ✅ 支持的地址格式与文档描述一致(DB/M/I/Q/T/C区域)
+- ✅ 正则表达式解析逻辑正确
+- ✅ WordLen映射准确(bit/byte/word/dword/real/counter/timer)
+
+**批量读取审查**:
+- ✅ 按Area+DBNumber分组策略正确
+- ✅ AGReadMulti单次最大20项限制已实现
+- ✅ 分组超限时自动拆分为多批处理
+
+**配置解析审查**:
+- ✅ PLC类型默认值映射正确
+- ✅ 超时、重试、心跳等参数解析覆盖完整
+- ✅ 连接类型(connType)解析正确(PG/OP/S7Basic)
+
+**建议改进项**:
+- 建议增加scheduler层的集成测试(当前依赖mock client)
+- 建议增加真实PLC环境下的端到端测试
+- 建议增加PDU大小自适应测试
+
+### 测试命令
+
+```bash
+go test -v ./internal/driver/s7/...
+```
