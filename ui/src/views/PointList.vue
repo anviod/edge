@@ -2136,7 +2136,7 @@ const getProtocolAddressLabel = () => {
 
 const getProtocolAddressPlaceholder = () => {
     switch (channelProtocol.value) {
-        case 's7': return 'DB1.DBD0'
+        case 's7': return 'DB1.DBD0 或 M0.0'
         case 'ethernet-ip': return 'Program:Main.MyTag'
         case 'mitsubishi-slmp': return 'D100'
         case 'omron-fins': return 'CIO1.2'
@@ -2147,7 +2147,7 @@ const getProtocolAddressPlaceholder = () => {
 
 const getProtocolAddressTooltip = () => {
     switch (channelProtocol.value) {
-        case 's7': return '例如: DB1.DBD0, M0.0'
+        case 's7': return 'DB区: DB1.DBD0(双字), DB1.DBW2(字), DB1.DBX0.1(位), DB1.DBB4(字节) | M区: M0.0(位), MD0(双字), MW0(字) | I区: I0.0(位), ID0(双字) | Q区: Q0.0(位), QD0(双字) | T0(定时器), C0(计数器)'
         case 'ethernet-ip': return '例如: Program:Main.MyTag'
         case 'mitsubishi-slmp': return '格式: D100, M0, X0, D20.2, D100.16L'
         case 'omron-fins': return '格式: CIO1.2, D100, W3.4, EM10.100'
@@ -3746,4 +3746,3 @@ const normalizeWriteValue = () => {
   color: #1e293b;
 }
 </style>
-

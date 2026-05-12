@@ -5,11 +5,15 @@ import (
 	"edge-gateway/internal/driver"
 	"edge-gateway/internal/model"
 	"fmt"
-	"log"
-	"math/rand"
 	"strconv"
 	"time"
+
+	"github.com/anviod/gos7"
+	"go.uber.org/zap"
 )
+
+// Client 接口别名，方便mock测试
+type Client = gos7.Client
 
 func init() {
 	driver.RegisterDriver("s7", func() driver.Driver {
@@ -17,57 +21,59 @@ func init() {
 	})
 }
 
+// S7Driver S7协议驱动（真实实现）
 type S7Driver struct {
-	config  model.DriverConfig
-	simData map[string]interface{}
-
-	// Connection metrics
-	connectionStartTime time.Time
-	reconnectCount      int64
-	lastDisconnectTime  time.Time
-
-	// Request metrics
-	totalRequests int64
-	successCount  int64
-	failureCount  int64
+	config    model.DriverConfig
+	transport *S7Transport
+	decoder   *S7Decoder
+	scheduler *S7Scheduler
 }
 
 func NewS7Driver() driver.Driver {
-	return &S7Driver{
-		simData: make(map[string]interface{}),
-	}
+	return &S7Driver{}
 }
 
 func (d *S7Driver) Init(cfg model.DriverConfig) error {
 	d.config = cfg
+	d.decoder = NewS7Decoder()
+	d.transport = NewS7Transport(cfg.Config)
+	d.scheduler = NewS7Scheduler(d.transport, d.decoder, cfg.Config)
+
+	zap.L().Info("[S7] Driver initialized",
+		zap.Any("config", cfg.Config),
+	)
 	return nil
 }
 
 func (d *S7Driver) Connect(ctx context.Context) error {
-	d.connectionStartTime = time.Now()
-	d.reconnectCount++
+	if d.transport == nil {
+		return fmt.Errorf("S7 driver not initialized")
+	}
 
-	cfg := d.config.Config
-	log.Printf("S7 Driver connecting to %v:%v (Rack=%v, Slot=%v, Type=%v, Startup=%v) (Simulated)...",
-		cfg["ip"], cfg["port"], cfg["rack"], cfg["slot"], cfg["plcType"], cfg["startup"])
-	time.Sleep(500 * time.Millisecond)
-	log.Printf("S7 Driver connected (Simulated)")
+	if err := d.transport.Connect(ctx); err != nil {
+		return fmt.Errorf("S7 connection failed: %w", err)
+	}
+
 	return nil
 }
 
 func (d *S7Driver) Disconnect() error {
-	d.lastDisconnectTime = time.Now()
-	log.Printf("S7 Driver disconnected")
+	if d.transport != nil {
+		return d.transport.Disconnect()
+	}
 	return nil
 }
 
 func (d *S7Driver) Health() driver.HealthStatus {
+	if d.transport == nil || !d.transport.IsConnected() {
+		return driver.HealthStatusBad
+	}
 	return driver.HealthStatusGood
 }
 
 func (d *S7Driver) SetSlaveID(slaveID uint8) error {
-	// S7 usually doesn't use SlaveID in the same way as Modbus,
-	// but might map to Rack/Slot. Ignoring for simulation.
+	// S7协议不使用SlaveID，但可能映射到rack/slot
+	// 暂不实现动态修改
 	return nil
 }
 
@@ -76,64 +82,52 @@ func (d *S7Driver) SetDeviceConfig(config map[string]any) error {
 }
 
 func (d *S7Driver) GetConnectionMetrics() (connectionSeconds int64, reconnectCount int64, localAddr string, remoteAddr string, lastDisconnectTime time.Time) {
-	connectionSeconds = 0
-	if !d.connectionStartTime.IsZero() {
-		connectionSeconds = int64(time.Since(d.connectionStartTime).Seconds())
+	if d.transport == nil {
+		return
+	}
+	return d.transport.GetConnectionMetrics()
+}
+
+func (d *S7Driver) ReadPoints(ctx context.Context, points []model.Point) (map[string]model.Value, error) {
+	if d.transport == nil || !d.transport.IsConnected() {
+		return nil, fmt.Errorf("S7 driver not connected")
 	}
 
-	reconnectCount = d.reconnectCount
-	lastDisconnectTime = d.lastDisconnectTime
+	return d.scheduler.ReadPoints(ctx, points)
+}
 
-	// Extract addresses from config
-	if cfg := d.config.Config; cfg != nil {
-		if ip, ok := cfg["ip"].(string); ok {
-			var port int
-			switch p := cfg["port"].(type) {
-			case float64:
-				port = int(p)
-			case int:
-				port = p
-			case string:
-				if parsed, err := strconv.Atoi(p); err == nil {
-					port = parsed
-				}
-			}
-			if port > 0 {
-				remoteAddr = fmt.Sprintf("%s:%d", ip, port)
-			}
-		}
+func (d *S7Driver) WritePoint(ctx context.Context, p model.Point, value any) error {
+	if d.transport == nil || !d.transport.IsConnected() {
+		return fmt.Errorf("S7 driver not connected")
 	}
 
-	return
+	return d.scheduler.WritePoint(ctx, p, value)
 }
 
 // GetMetrics 返回S7驱动的详细指标
 func (d *S7Driver) GetMetrics() model.ChannelMetrics {
-	// 获取基础连接指标
 	connSec, reconCount, localAddr, remoteAddr, lastDisc := d.GetConnectionMetrics()
 
-	// 使用真实的请求统计数据
-	totalRequests := d.totalRequests
-	successCount := d.successCount
-	failureCount := d.failureCount
+	totalRequests, successCount, failureCount := int64(0), int64(0), int64(0)
+	if d.scheduler != nil {
+		totalRequests, successCount, failureCount = d.scheduler.GetStats()
+	}
 
-	// 计算成功率
 	successRate := 0.0
 	if totalRequests > 0 {
 		successRate = float64(successCount) / float64(totalRequests)
 	}
 
-	// 构建指标
-	metrics := model.ChannelMetrics{
-		QualityScore:       d.calculateQualityScore(),
+	return model.ChannelMetrics{
+		QualityScore:       d.calculateQualityScore(successRate),
 		Protocol:           "S7",
 		SuccessRate:        successRate,
 		TimeoutCount:       failureCount,
-		CrcError:           0, // S7使用TCP，不适用CRC
+		CrcError:           0,
 		CrcErrorRate:       0.0,
-		RetryRate:          0.0, // 可以后续添加重试统计
+		RetryRate:          0.0,
 		ExceptionCode:      0,
-		AvgRtt:             0, // 可以后续添加RTT统计
+		AvgRtt:             0,
 		MaxRtt:             0,
 		MinRtt:             0,
 		TotalRequests:      totalRequests,
@@ -147,25 +141,38 @@ func (d *S7Driver) GetMetrics() model.ChannelMetrics {
 		LastDisconnectTime: lastDisc,
 		Timestamp:          time.Now(),
 	}
-
-	return metrics
 }
 
 // calculateQualityScore 计算S7质量评分
-func (d *S7Driver) calculateQualityScore() int {
-	// S7驱动目前没有连接状态检查，假设连接正常
-	score := 85 // S7通常比较稳定，给较高基础分
+func (d *S7Driver) calculateQualityScore(successRate float64) int {
+	score := 85
 
-	// 根据重连次数降低分数
-	if d.reconnectCount > 10 {
-		score -= 20
-	} else if d.reconnectCount > 5 {
-		score -= 10
-	} else if d.reconnectCount > 0 {
+	// 根据成功率调整
+	if successRate < 0.5 {
+		score -= 30
+	} else if successRate < 0.8 {
+		score -= 15
+	} else if successRate < 0.95 {
 		score -= 5
 	}
 
-	// 确保分数在0-100范围内
+	// 根据连接状态调整
+	if d.transport != nil && !d.transport.IsConnected() {
+		score -= 40
+	}
+
+	// 根据重连次数调整
+	if d.transport != nil {
+		_, reconCount, _, _, _ := d.transport.GetConnectionMetrics()
+		if reconCount > 10 {
+			score -= 20
+		} else if reconCount > 5 {
+			score -= 10
+		} else if reconCount > 0 {
+			score -= 5
+		}
+	}
+
 	if score < 0 {
 		score = 0
 	} else if score > 100 {
@@ -175,114 +182,19 @@ func (d *S7Driver) calculateQualityScore() int {
 	return score
 }
 
-func (d *S7Driver) ReadPoints(ctx context.Context, points []model.Point) (map[string]model.Value, error) {
-	results := make(map[string]model.Value)
-
-	for _, p := range points {
-		d.totalRequests++
-		val, err := d.readPoint(p)
-		quality := "Good"
-		if err != nil {
-			quality = "Bad"
-			log.Printf("Error reading point %s: %v", p.Name, err)
-			d.failureCount++
-			continue
-		}
-		d.successCount++
-
-		results[p.ID] = model.Value{
-			PointID: p.ID,
-			Value:   val,
-			Quality: quality,
-			TS:      time.Now(),
-		}
-	}
-	return results, nil
-}
-
-func (d *S7Driver) readPoint(p model.Point) (interface{}, error) {
-	// Check if we have a simulated value stored
-	if val, ok := d.simData[p.ID]; ok {
-		// Add some jitter to numbers to make it look alive
-		switch v := val.(type) {
+// parseConfigFloat 从配置中解析float64值
+func parseConfigFloat(cfg map[string]any, key string, defaultVal float64) float64 {
+	if v, ok := cfg[key]; ok {
+		switch val := v.(type) {
 		case float64:
-			return v + (rand.Float64() - 0.5), nil
-		case float32:
-			return v + float32(rand.Float64()-0.5), nil
+			return val
 		case int:
-			return v + rand.Intn(3) - 1, nil
-		default:
-			return val, nil
+			return float64(val)
+		case string:
+			if f, err := strconv.ParseFloat(val, 64); err == nil {
+				return f
+			}
 		}
 	}
-
-	// Otherwise generate based on type
-	switch p.DataType {
-	case "bool":
-		return rand.Intn(2) == 1, nil
-	case "uint8":
-		return uint8(rand.Intn(255)), nil
-	case "int8":
-		return int8(rand.Intn(255) - 128), nil
-	case "uint16":
-		return uint16(rand.Intn(65535)), nil
-	case "int16":
-		return int16(rand.Intn(65535) - 32768), nil
-	case "uint32":
-		return uint32(rand.Intn(100000)), nil
-	case "int32":
-		return int32(rand.Intn(100000)), nil
-	case "float", "float32":
-		return float32(20.0 + rand.Float64()*50.0), nil
-	case "double", "float64":
-		return 20.0 + rand.Float64()*50.0, nil
-	case "string":
-		return "Simulated S7 String", nil
-	default:
-		return 0, fmt.Errorf("unsupported type: %s", p.DataType)
-	}
-}
-
-func (d *S7Driver) WritePoint(ctx context.Context, p model.Point, value any) error {
-	log.Printf("S7 Write: Point=%s Addr=%s Type=%s Value=%v", p.Name, p.Address, p.DataType, value)
-
-	// Convert value based on DataType and store it
-	var storedVal interface{}
-	var err error
-
-	// Simple conversion helper
-	strVal := fmt.Sprintf("%v", value)
-
-	switch p.DataType {
-	case "bool":
-		storedVal = strVal == "true" || strVal == "1"
-	case "float", "float32":
-		if v, e := strconv.ParseFloat(strVal, 32); e == nil {
-			storedVal = float32(v)
-		} else {
-			err = e
-		}
-	case "double", "float64":
-		if v, e := strconv.ParseFloat(strVal, 64); e == nil {
-			storedVal = v
-		} else {
-			err = e
-		}
-	case "int16":
-		if v, e := strconv.ParseInt(strVal, 10, 16); e == nil {
-			storedVal = int16(v)
-		} else {
-			err = e
-		}
-	// Add other types as needed
-	default:
-		storedVal = value
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to convert value for simulation: %v", err)
-	}
-
-	d.simData[p.ID] = storedVal
-	return nil
+	return defaultVal
 }

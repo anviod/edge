@@ -35,11 +35,12 @@ description: EdgeX 项目的完整文档
           </div>
         </div>
         <aside class="hero-panel">
-          <p class="hero-panel__label">Start Here</p>
+          <p class="hero-panel__label">更新记录</p>
           <ul>
-            <li>先看 API 索引，快速了解平台能力边界与接口组织。</li>
-            <li>再看用户手册与快速启动，把部署、联调和交付路径串起来。</li>
-            <li>需要深入时，继续进入驱动、边缘计算、南北向数据与运维专题。</li>
+            <li><strong>2026年5月</strong>：新增S7协议支持，基于gos7库实现西门子PLC真实通信</li>
+            <li>S7协议支持AGReadMulti批量读取优化，单次最多读取20个数据项</li>
+            <li>支持S7-200Smart/1200/1500/300/400全系列PLC，涵盖DB/M/I/Q/T/C地址格式</li>
+            <li>详细实现请参阅<a href="PLC_S7.html">S7协议文档</a></li>
           </ul>
         </aside>
       </div>
@@ -91,11 +92,12 @@ description: EdgeX 项目的完整文档
       <article class="feature-card">
         <span class="feature-card__tag">Drivers</span>
         <h3>设备驱动专题</h3>
-        <p>覆盖 BACnet、OPC UA、Modbus 的设计、测试、优化和故障分析，方便按协议深入。</p>
+        <p>覆盖 BACnet、OPC UA、Modbus、S7 的设计、测试、优化和故障分析，方便按协议深入。</p>
         <div class="feature-card__links">
           <a class="mini-link" href="BACnet_设计说明.html">BACnet</a>
           <a class="mini-link" href="OPC_UA_Design.html">OPC UA</a>
           <a class="mini-link" href="MODBUS_OPTIMIZATION.html">Modbus</a>
+          <a class="mini-link" href="PLC_S7.html">S7协议</a>
         </div>
       </article>
 
@@ -156,6 +158,18 @@ description: EdgeX 项目的完整文档
           <li><a href="南向采集数据通道质量优化.html">通道质量优化</a></li>
           <li><a href="南向采集通道回归验证测试方案.html">回归验证测试方案</a></li>
           <li><a href="MQTT数据上下行格式.html">MQTT 数据上下行格式</a></li>
+        </ul>
+      </article>
+
+      <article class="feature-card">
+        <span class="feature-card__tag">S7 Protocol</span>
+        <h3>S7协议实现</h3>
+        <p>基于gos7库的西门子PLC真实通信，支持AGReadMulti批量读取优化，涵盖S7-200Smart/1200/1500/300/400全系列。</p>
+        <ul>
+          <li><a href="PLC_S7.html">S7协议完整文档</a></li>
+          <li><strong>关键特性：</strong>批量读取优化、自动重连心跳、多PLC类型支持</li>
+          <li><strong>支持地址：</strong>DB1.DBD0, M0.0, I0.0, Q0.0, T0, C0等S7标准格式</li>
+          <li><strong>性能提升：</strong>AGReadMulti单次最多读取20个数据项，减少网络往返</li>
         </ul>
       </article>
     </div>

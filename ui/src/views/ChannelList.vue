@@ -475,26 +475,17 @@
 
         <!-- S7 Config -->
         <div v-if="dialog.form.protocol === 's7'" class="config-section">
+          <a-divider orientation="left" :size="2">基础连接</a-divider>
           <a-form-item field="config.ip" label="PLC IP 地址" required>
-            <a-input v-model="dialog.form.config.ip" />
+            <a-input v-model="dialog.form.config.ip" placeholder="192.168.1.10" />
           </a-form-item>
           <a-form-item field="config.port" label="PLC 端口">
             <a-input-number v-model="dialog.form.config.port" :min="1" :max="65535" placeholder="102 (默认)" />
           </a-form-item>
           <a-row :gutter="12">
-            <a-col :span="12">
-              <a-form-item field="config.rack" label="CPU 机架号 (Rack)">
-                <a-input-number v-model="dialog.form.config.rack" :min="0" :max="10" placeholder="0 (默认)" />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item field="config.slot" label="CPU 槽号 (Slot)">
-                <a-input-number v-model="dialog.form.config.slot" :min="0" :max="10" placeholder="1 (默认)" />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
+            <a-col :span="8">
               <a-form-item field="config.plcType" label="PLC 型号">
-                <a-select v-model="dialog.form.config.plcType" placeholder="请选择 PLC 型号">
+                <a-select v-model="dialog.form.config.plcType" placeholder="请选择" allow-clear>
                   <a-option value="S7-200Smart">S7-200Smart</a-option>
                   <a-option value="S7-1200">S7-1200</a-option>
                   <a-option value="S7-1500">S7-1500</a-option>
@@ -503,12 +494,85 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :span="12">
+            <a-col :span="8">
+              <a-form-item field="config.rack" label="机架号 (Rack)">
+                <a-input-number v-model="dialog.form.config.rack" :min="0" :max="10" placeholder="自动" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item field="config.slot" label="槽号 (Slot)">
+                <a-input-number v-model="dialog.form.config.slot" :min="0" :max="10" placeholder="自动" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="12">
+            <a-col :span="8">
+              <a-form-item field="config.connect_type" label="连接类型">
+                <a-select v-model="dialog.form.config.connect_type" placeholder="自动" allow-clear>
+                  <a-option value="PG">PG (编程设备)</a-option>
+                  <a-option value="OP">OP (操作面板)</a-option>
+                  <a-option value="S7Basic">S7 Basic</a-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
               <a-form-item field="config.startup" label="启动方式">
-                <a-select v-model="dialog.form.config.startup" placeholder="请选择启动方式">
+                <a-select v-model="dialog.form.config.startup" placeholder="请选择" allow-clear>
                   <a-option value="cold">冷启动</a-option>
                   <a-option value="warm">热启动</a-option>
                 </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item field="config.cpu_protection" label="CPU停机保护">
+                <a-switch v-model="dialog.form.config.cpu_protection" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-divider orientation="left" :size="2">通信参数</a-divider>
+          <a-row :gutter="12">
+            <a-col :span="8">
+              <a-form-item field="config.timeout" label="超时时间 (ms)">
+                <a-input-number v-model="dialog.form.config.timeout" :min="500" :max="30000" placeholder="2000" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item field="config.max_retries" label="重试次数">
+                <a-input-number v-model="dialog.form.config.max_retries" :min="0" :max="10" placeholder="1" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item field="config.heartbeat_interval" label="心跳间隔 (ms)">
+                <a-input-number v-model="dialog.form.config.heartbeat_interval" :min="0" :max="300000" placeholder="30000" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="12">
+            <a-col :span="8">
+              <a-form-item field="config.pdu_size" label="PDU缓冲区 (字节)">
+                <a-input-number v-model="dialog.form.config.pdu_size" :min="240" :max="960" placeholder="4096" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item field="config.qos" label="QoS 等级">
+                <a-select v-model="dialog.form.config.qos" placeholder="1" allow-clear>
+                  <a-option :value="0">0 - 最多一次</a-option>
+                  <a-option :value="1">1 - 至少一次</a-option>
+                  <a-option :value="2">2 - 恰好一次</a-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item field="config.connect_timeout" label="连接超时 (ms)">
+                <a-input-number v-model="dialog.form.config.connect_timeout" :min="500" :max="60000" placeholder="5000" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="12">
+            <a-col :span="8">
+              <a-form-item field="config.batch_read_max" label="批量读取上限">
+                <a-input-number v-model="dialog.form.config.batch_read_max" :min="1" :max="500" placeholder="100" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -1835,5 +1899,4 @@ onMounted(() => {
   border-radius: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
-</style>< / s t y l e >  
- 
+</style>
