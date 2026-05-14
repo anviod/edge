@@ -13,12 +13,24 @@ plugins:
 nav:
   - title: 首页
     url: /
+  - title: 产品介绍
+    url: /guide/产品说明.html
+  - title: 用户手册
+    url: /guide/USER_MANUAL.html
   - title: API 文档
-    url: /API/API_Index.html
-  - title: 手册
-    url: /man/USER_MANUAL.html
-  - title: 架构
-    url: /ARCHITECTURE_V2.html
+    url: /api/
+  - title: 架构设计
+    url: /architecture/
+  - title: 设备驱动
+    url: /drivers/
+  - title: 边缘计算
+    url: /edge/
+  - title: 北向数据
+    url: /northbound/
+  - title: 部署指南
+    url: /deployment/
+  - title: 运维文档
+    url: /operations/
 
 # 页面配置
 permalink: /:path/:basename.html
@@ -28,3 +40,4 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - README.md
+  - README_CN.md
