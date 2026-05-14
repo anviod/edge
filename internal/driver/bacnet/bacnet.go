@@ -231,7 +231,7 @@ func (d *BACnetDriver) Connect(ctx context.Context) error {
 }
 
 func (d *BACnetDriver) discoverDevice(deviceID int, ip string, port int) error {
-//	zap.L().Info("Discovering BACnet device", zap.Int("device_id", deviceID), zap.String("ip", ip), zap.Int("port", port))
+	//	zap.L().Info("Discovering BACnet device", zap.Int("device_id", deviceID), zap.String("ip", ip), zap.Int("port", port))
 
 	// WhoIs
 	whois := &WhoIsOpts{
@@ -312,7 +312,7 @@ func (d *BACnetDriver) discoverDevice(deviceID int, ip string, port int) error {
 	if port != 0 && len(targetDevCtx.Device.Addr.Mac) == 6 {
 		discPort := int(targetDevCtx.Device.Addr.Mac[4])<<8 | int(targetDevCtx.Device.Addr.Mac[5])
 		if discPort != port {
-//				zap.L().Warn("Discovered device port differs from configured, using discovered port", zap.Int("disc_port", discPort), zap.Int("conf_port", port))
+			//				zap.L().Warn("Discovered device port differs from configured, using discovered port", zap.Int("disc_port", discPort), zap.Int("conf_port", port))
 			// Do NOT overwrite. Let it use discPort.
 			// targetDevCtx.Device.Addr.Mac[4] = uint8(port >> 8)
 			// targetDevCtx.Device.Addr.Mac[5] = uint8(port & 0xFF)
@@ -1414,6 +1414,7 @@ func (d *BACnetDriver) scanDeviceObjects(client Client, devID int, deep bool) (a
 
 	data := resp.Object.Properties[0].Data
 	zap.L().Info("ObjectList data type", zap.String("type", fmt.Sprintf("%T", data)))
+	zap.L().Info("ObjectList raw data", zap.String("data", fmt.Sprintf("%v", data)))
 
 	// Data should be []btypes.ObjectID
 	// But it might be parsed differently depending on decoding.
@@ -1425,12 +1426,17 @@ func (d *BACnetDriver) scanDeviceObjects(client Client, devID int, deep bool) (a
 
 	if list, ok := data.([]btypes.ObjectID); ok {
 		objectIDs = list
+		zap.L().Info("ObjectList parsed as []btypes.ObjectID", zap.Int("count", len(objectIDs)))
 	} else if list, ok := data.([]interface{}); ok {
-		for _, item := range list {
+		zap.L().Info("ObjectList parsed as []interface{}", zap.Int("count", len(list)))
+		for i, item := range list {
 			if oid, ok := item.(btypes.ObjectID); ok {
 				objectIDs = append(objectIDs, oid)
+			} else {
+				zap.L().Warn("ObjectList item is not ObjectID", zap.Int("index", i), zap.String("type", fmt.Sprintf("%T", item)), zap.String("value", fmt.Sprintf("%v", item)))
 			}
 		}
+		zap.L().Info("ObjectList converted ObjectIDs count", zap.Int("count", len(objectIDs)))
 	} else {
 		zap.L().Warn("ObjectList data is not []ObjectID", zap.String("type", fmt.Sprintf("%T", data)))
 		return []any{}, nil

@@ -15,7 +15,7 @@ description: EdgeX 项目的完整文档
           <h1>EdgeX 文档</h1>
           <p>面向工业现场接入、边缘计算与北向集成的文档入口，集中提供 API、架构、部署、驱动适配、测试验证和运维资料。</p>
           <div class="hero-actions">
-            <a class="button-link button-link--primary" href="API/API_Index_CN.html">查看 API 文档</a>
+            <a class="button-link button-link--primary" href="产品说明.html">查看产品文档</a>
             <a class="button-link button-link--secondary" href="man/USER_MANUAL.html">打开用户手册</a>
             <a class="button-link button-link--secondary" href="ARCHITECTURE_V2.html">浏览架构设计</a>
           </div>
@@ -29,8 +29,8 @@ description: EdgeX 项目的完整文档
               <span>当前公开版本</span>
             </div>
             <div class="metric-card">
-              <strong>20260409</strong>
-              <span>信息更新时间</span>
+              <strong>20260514</strong>
+              <span>信息更新</span>
             </div>
           </div>
         </div>
