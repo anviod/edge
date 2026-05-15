@@ -1,4 +1,5 @@
 # 站点配置
+encoding: utf-8
 name: EdgeX 文档
 description: EdgeX 项目文档网站
 
