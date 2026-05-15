@@ -1,3 +1,9 @@
+---
+layout: default
+title: MQTT数据上下行格式
+description: EdgeX MQTT数据上下行格式
+---
+
 数据上下行格式 支持 neuron方式上报
 以下内容描述 MQTT 插件如何上报采集的数据，以及如何通过 MQTT 插件实现读写点位数据。
 

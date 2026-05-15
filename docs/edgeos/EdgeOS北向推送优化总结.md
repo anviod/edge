@@ -1,3 +1,9 @@
+---
+layout: default
+title: EdgeOS 北向数据推送系统优化总结
+description: EdgeX EdgeOS 北向数据推送系统优化总结
+---
+
 # EdgeOS 北向数据推送系统优化总结
 
 ## 执行概览

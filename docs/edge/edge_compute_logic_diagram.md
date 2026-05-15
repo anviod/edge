@@ -1,3 +1,9 @@
+---
+layout: default
+title: 边缘计算逻辑图
+description: EdgeX 边缘计算逻辑图
+---
+
 # 边缘计算逻辑图
 
 ## 核心工作流程

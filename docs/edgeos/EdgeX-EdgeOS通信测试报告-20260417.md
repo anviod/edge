@@ -1,3 +1,9 @@
+---
+layout: default
+title: EdgeX-EdgeOS 通信测试报告
+description: EdgeX EdgeX-EdgeOS 通信测试报告
+---
+
 # EdgeX-EdgeOS 通信测试报告
 
 **测试日期**: 2026-04-17

@@ -1,3 +1,9 @@
+---
+layout: default
+title: 边缘计算拓扑图
+description: EdgeX 边缘计算拓扑图
+---
+
 # 边缘计算拓扑图
 
 ## 系统整体架构

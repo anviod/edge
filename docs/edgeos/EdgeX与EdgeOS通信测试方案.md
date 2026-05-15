@@ -1,3 +1,9 @@
+---
+layout: default
+title: EdgeX-EdgeOS MQTT/NATS 通信测试方案
+description: EdgeX EdgeX-EdgeOS MQTT/NATS 通信测试方案
+---
+
 # EdgeX-EdgeOS MQTT/NATS 通信测试方案
 
 ## 概述

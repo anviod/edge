@@ -1,3 +1,9 @@
+---
+layout: default
+title: EdgeOS 升级说明
+description: EdgeX EdgeOS 升级说明
+---
+
 # EdgeOS 升级说明
 
 ## 版本信息

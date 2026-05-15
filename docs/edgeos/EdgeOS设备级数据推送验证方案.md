@@ -1,3 +1,9 @@
+---
+layout: default
+title: EdgeOS 设备级数据推送验证方案
+description: EdgeX EdgeOS 设备级数据推送验证方案
+---
+
 # EdgeOS 设备级数据推送验证方案
 
 ## 一、核心改进说明
