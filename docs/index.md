@@ -47,24 +47,87 @@ description: EdgeX 项目的完整文档
   </div>
 </section>
 
-<section class="landing-section">
+<section class="landing-section" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 40px 0;">
   <div class="shell shell--wide">
-    <div class="wide-panel">
-      <div class="section-kicker">计划方向</div>
-      <h2>即将推出</h2>
-      <p>展示正在规划和开发中的功能，预计发布时间仅供参考。</p>
-      <div class="quick-links">
-        <span class="quick-links__tag">Q3 2026</span>
-        <a href="drivers/index.html">EtherNet/IP 驱动支持</a>
-        <a href="https://github.com/anviod/logix" target="_blank">logix 库</a>
+    <div class="wide-panel" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px;">
+      <div class="section-kicker" style="color: #00d4ff;">计划方向</div>
+      <h2 style="color: #ffffff; margin-bottom: 15px;">即将推出</h2>
+      <p style="color: #b8c5d6; margin-bottom: 25px;">展示正在规划和开发中的功能，预计发布时间仅供参考。</p>
+      
+      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+        <span style="background: linear-gradient(135deg, #00d4ff, #0099cc); color: white; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">Q3 2026</span>
+        <a href="drivers/index.html" style="color: #00d4ff; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">EtherNet/IP 驱动支持</a>
+        <a href="https://github.com/anviod/logix" target="_blank" style="color: #00d4ff; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">logix 库</a>
+        <a href="TODO/EtherNet_IP驱动真实通信实现方案.md" style="color: #ffd700; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">实现方案文档</a>
       </div>
-      <ul>
-        <li>基于 <a href="https://github.com/anviod/logix" target="_blank">logix</a> 库实现与 PLC 的真实 TCP 通信</li>
-        <li>支持 ControlLogix、CompactLogix、Micro800 等系列</li>
-        <li>支持 bool、sint、int、dint、real、string 数据类型</li>
-        <li>批量读取优化，减少网络往返</li>
-        <li>自动重连、心跳保活、健康状态检测</li>
-      </ul>
+      
+      <div style="grid-template-columns: 1fr 1fr; gap: 30px; display: grid;">
+        <div>
+          <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 18px;">协议介绍</h3>
+          <p style="color: #b8c5d6; font-size: 14px; line-height: 1.8;">
+            <strong style="color: #ffffff;">EtherNet/IP</strong> 是工业以太网协议，基于 CIP (Common Industrial Protocol) 技术，广泛应用于 Allen-Bradley PLC 设备。支持 ControlLogix、CompactLogix、Micro800 等全系列 Rockwell PLC。
+          </p>
+        </div>
+        
+        <div>
+          <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 18px;">技术栈</h3>
+          <ul style="color: #b8c5d6; font-size: 14px; line-height: 1.8; list-style-type: none; padding-left: 0;">
+            <li style="padding-left: 20px; position: relative;">
+              <span style="position: absolute; left: 0; color: #00d4ff;">•</span>
+              <strong style="color: #ffffff;">Go</strong> + <a href="https://github.com/anviod/logix" target="_blank" style="color: #00d4ff;">logix</a> 库
+            </li>
+            <li style="padding-left: 20px; position: relative;">
+              <span style="position: absolute; left: 0; color: #00d4ff;">•</span>
+              Vue 3 + Arco Design (前端)
+            </li>
+            <li style="padding-left: 20px; position: relative;">
+              <span style="position: absolute; left: 0; color: #00d4ff;">•</span>
+              TCP/IP 通信协议
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 18px;">核心功能</h3>
+        <ul style="color: #b8c5d6; font-size: 14px; line-height: 1.8; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+          <li style="padding-left: 20px; position: relative;">
+            <span style="position: absolute; left: 0; color: #00ff88;">✓</span>
+            基于 logix 库的真实 TCP 通信
+          </li>
+          <li style="padding-left: 20px; position: relative;">
+            <span style="position: absolute; left: 0; color: #00ff88;">✓</span>
+            Tag 地址格式批量读取与单点写入
+          </li>
+          <li style="padding-left: 20px; position: relative;">
+            <span style="position: absolute; left: 0; color: #00ff88;">✓</span>
+            支持 bool、sint、int、dint、real、string 数据类型
+          </li>
+          <li style="padding-left: 20px; position: relative;">
+            <span style="position: absolute; left: 0; color: #00ff88;">✓</span>
+            批量读取优化，减少网络往返
+          </li>
+          <li style="padding-left: 20px; position: relative;">
+            <span style="position: absolute; left: 0; color: #00ff88;">✓</span>
+            自动重连、心跳保活、健康状态检测
+          </li>
+          <li style="padding-left: 20px; position: relative;">
+            <span style="position: absolute; left: 0; color: #00ff88;">✓</span>
+            连接指标统计与监控
+          </li>
+        </ul>
+      </div>
+      
+      <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 18px;">支持 PLC 系列</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">ControlLogix</span>
+          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">CompactLogix</span>
+          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">Micro800</span>
+          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">SLC 500</span>
+          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">PLC-5</span>
+        </div>
+      </div>
     </div>
   </div>
 </section>
