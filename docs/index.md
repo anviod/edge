@@ -47,9 +47,9 @@ description: EdgeX 项目的完整文档
   </div>
 </section>
 
-<section class="landing-section" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 40px 0;">
+<section class="landing-section">
   <div class="shell shell--wide">
-    <div class="wide-panel" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px;">
+    <div class="wide-panel" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%); border: 1px solid #444; border-radius: 12px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
       <div class="section-kicker" style="color: #00d4ff;">计划方向</div>
       <h2 style="color: #ffffff; margin-bottom: 15px;">即将推出</h2>
       <p style="color: #b8c5d6; margin-bottom: 25px;">展示正在规划和开发中的功能，预计发布时间仅供参考。</p>
@@ -121,11 +121,11 @@ description: EdgeX 项目的完整文档
       <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
         <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 18px;">支持 PLC 系列</h3>
         <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">ControlLogix</span>
-          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">CompactLogix</span>
-          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">Micro800</span>
-          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">SLC 500</span>
-          <span style="background: rgba(0,212,255,0.1); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.2);">PLC-5</span>
+          <span style="background: rgba(0,212,255,0.15); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.3);">ControlLogix</span>
+          <span style="background: rgba(0,212,255,0.15); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.3);">CompactLogix</span>
+          <span style="background: rgba(0,212,255,0.15); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.3);">Micro800</span>
+          <span style="background: rgba(0,212,255,0.15); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.3);">SLC 500</span>
+          <span style="background: rgba(0,212,255,0.15); color: #00d4ff; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(0,212,255,0.3);">PLC-5</span>
         </div>
       </div>
     </div>
