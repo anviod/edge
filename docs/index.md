@@ -58,7 +58,7 @@ description: EdgeX 项目的完整文档
         <span style="background: linear-gradient(135deg, #00d4ff, #0099cc); color: white; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">Q3 2026</span>
         <a href="drivers/index.html" style="color: #00d4ff; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">EtherNet/IP 驱动支持</a>
         <a href="https://github.com/anviod/logix" target="_blank" style="color: #00d4ff; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">logix 库</a>
-        <a href="TODO/EtherNet_IP驱动真实通信实现方案.md" style="color: #ffd700; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">实现方案文档</a>
+        <a href="TODO/EtherNet_IP驱动真实通信实现方案.html" style="color: #ffd700; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; transition: border-color 0.3s;">实现方案文档</a>
       </div>
       
       <div style="grid-template-columns: 1fr 1fr; gap: 30px; display: grid;">
