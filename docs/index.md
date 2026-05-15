@@ -51,6 +51,36 @@ description: EdgeX 项目的完整文档
   <div class="shell shell--wide">
     <div class="section-heading">
       <div>
+        <div class="section-kicker">计划方向</div>
+        <h2>即将推出</h2>
+        <p>展示正在规划和开发中的功能，预计发布时间仅供参考。</p>
+      </div>
+    </div>
+
+    <div class="cards-grid cards-grid--two">
+      <article class="feature-card">
+        <span class="feature-card__tag">Q3 2026</span>
+        <h3>EtherNet/IP 驱动支持</h3>
+        <p>将EtherNet/IP协议采集通道从模拟实现升级为真实通信，支持Allen-Bradley系列PLC。</p>
+        <ul>
+          <li>基于 gologix 库实现与 PLC 的真实 TCP 通信</li>
+          <li>支持 ControlLogix、CompactLogix、Micro800 等系列</li>
+          <li>支持 bool、sint、int、dint、real、string 数据类型</li>
+          <li>批量读取优化，减少网络往返</li>
+          <li>自动重连、心跳保活、健康状态检测</li>
+        </ul>
+        <div class="feature-card__links">
+          <a class="mini-link" href="drivers/index.html">驱动总览</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section">
+  <div class="shell shell--wide">
+    <div class="section-heading">
+      <div>
         <div class="section-kicker">核心文档入口</div>
         <h2>快速导航</h2>
         <p>按使用场景整理常用资料，适合从接口联调、系统部署、驱动开发、架构评审和日常运维等任务。</p>
