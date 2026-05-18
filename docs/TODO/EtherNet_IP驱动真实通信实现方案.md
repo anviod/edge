@@ -12,7 +12,7 @@ description: EdgeX EtherNet/IP 驱动真实通信实现方案
 
 ## 2. 核心功能
 
-- **EtherNet/IP真实通信**: 基于github.com/loki-os/go-ethernet-ip库实现与Allen-Bradley系列PLC的TCP通信
+- **EtherNet/IP真实通信**: 基于github.com/anviod/ethernet-ip库实现与Allen-Bradley系列PLC的TCP通信
 - **前端通道配置增强**: 支持IP地址、端口、超时时间、重试次数、心跳间隔、缓冲区大小、QoS等级、连接类型(CIP Connection Type)、CPU插槽值
 - **点位读写**: 支持EtherNet/IP Tag地址格式的批量读取和单点写入
 - **数据类型支持**: bool, sint, int, dint, real, string, 数组类型
@@ -29,7 +29,7 @@ description: EdgeX EtherNet/IP 驱动真实通信实现方案
 
 ### 3.1.1 库对比分析
 
-| 评估维度 | loki-os/go-ethernet-ip | danomagnum/gologix |
+| 评估维度 | anviod/ethernet-ip | danomagnum/gologix |
 | :--- | :--- | :--- |
 | **Star数** | 70 | 66 |
 | **提交活跃度** | 85 commits (更新至2022) | 431 commits (更新至2026) |
@@ -42,7 +42,7 @@ description: EdgeX EtherNet/IP 驱动真实通信实现方案
 
 ### 3.1.2 本项目选型
 
-**确定使用**: `github.com/loki-os/go-ethernet-ip`
+**确定使用**: `github.com/anviod/ethernet-ip`
 
 **选型理由**:
 1. **通用性更强**: 完整的CIP协议实现，支持多种厂商设备
@@ -53,7 +53,7 @@ description: EdgeX EtherNet/IP 驱动真实通信实现方案
 ### 3.1.3 依赖配置
 
 ```go
-require github.com/loki-os/go-ethernet-ip latest
+require github.com/anviod/ethernet-ip latest
 ```
 
 ## 4. 实现方案
@@ -556,7 +556,7 @@ Motor_Status.0       -> TagName="Motor_Status", BitPosition=0
 
 ## 6. go.mod依赖
 
-新增: `github.com/loki-os/go-ethernet-ip`
+新增: `github.com/anviod/ethernet-ip`
 
 ## 7. 实现细节
 
@@ -579,7 +579,7 @@ Motor_Status.0       -> TagName="Motor_Status", BitPosition=0
 ### 7.2 go-ethernet-ip库结构
 
 ```
-github.com/loki-os/go-ethernet-ip/
+github.com/anviod/ethernet-ip/
 ├── bufferx/      # 缓冲区管理
 ├── command/     # CIP命令封装
 ├── messages/    # 消息编解码
@@ -700,7 +700,7 @@ internal/driver/ethernetip/
 
 ## 12. 参考资源
 
-- [go-ethernet-ip库](https://github.com/loki-os/go-ethernet-ip)
+- [go-ethernet-ip库](https://github.com/anviod/ethernet-ip)
 - [gologix库](https://github.com/danomagnum/gologix) (备选)
 - [EtherNet/IP协议规范](https://literature.rockwellautomation.com/lc/73/Section1.htm)
 - [CIP协议规范](https://www.odva.org/technology-standards/key-technologies/cip)
